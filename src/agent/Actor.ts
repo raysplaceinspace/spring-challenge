@@ -102,7 +102,9 @@ export class Actor {
                 const cost = pathMap.cost(closest.pos);
                 const payoff = this.payoff(closest, pac, pathMap);
                 if (closest && cost < Infinity) {
-                    const next = pathMap.pathTo(closest.pos)[0];
+                    const path = pathMap.pathTo(closest.pos);
+                    let next = path[0];
+
                     const action: w.MoveAction = { pac: pac.id, type: "move", target: next };
                     moves.push(action);
 

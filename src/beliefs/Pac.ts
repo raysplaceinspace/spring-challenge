@@ -7,6 +7,7 @@ export class Pac {
     public seenTick = 0;
     public abilityTick = 0;
     public alive = true;
+    public speedTicksRemaining = 0;
 
     constructor(
         public id: number,
@@ -82,6 +83,7 @@ export class Pac {
         this.form = sensor.type;
         this.seenTick = view.tick;
         this.abilityTick = sensor.abilityCooldown;
+        this.speedTicksRemaining = sensor.speedTurnsLeft;
     }
 }
 
