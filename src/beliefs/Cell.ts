@@ -1,11 +1,13 @@
 import * as collections from '../util/collections';
 import * as traverse from '../util/traverse'
 import * as w from '../model';
+import Pac from './Pac';
 import Vec from '../util/vector';
 
 export class Cell {
-    public pellet = 0;
+    public value = 0;
     public seenTick = 0;
+    public wall = false;
 
     constructor(public pos: Vec) {
     }
@@ -19,8 +21,9 @@ export class Cell {
 
     private static init(view: w.View, x: number, y: number): Cell {
         const cell = new Cell(new Vec(x, y));
-        cell.pellet = view.map[y][x] === w.Tiles.Blank ? 1 : 0;
+        cell.value = view.map[y][x] === w.Tiles.Blank ? 1 : 0;
         cell.seenTick = view.tick;
+        cell.wall = view.map[y][x] === w.Tiles.Wall;
         return cell;
     }
 
@@ -44,7 +47,7 @@ export class Cell {
     }
 
     private seen(tick: number, pellet: number) {
-        this.pellet = pellet;
+        this.value = pellet;
         this.seenTick = tick;
     }
 }

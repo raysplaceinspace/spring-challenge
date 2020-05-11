@@ -54,12 +54,15 @@ export function withinBounds(p: Vec, dimensions: Dimensions) {
     return distanceToEdge(p, dimensions) >= 0;
 }
 
-export function* neighbours(pos: Vec, dimensions: Dimensions, range: number = 1): Iterable<Vec> {
-    for (let y = pos.y - range; y <= pos.y + range; ++y) {
-        for (let x = pos.x - range; x <= pos.x + range; ++x) {
-            const n = new Vec(x, y);
-            if (Vec.l1(pos, n) <= range && withinBounds(n, dimensions)) {
-                yield n;
+export function* neighbours(pos: Vec, dimensions: Dimensions, wrapping = Wrap): Iterable<Vec> {
+    for (const heading of headings()) {
+        const next = pos.clone().add(heading);
+        if (wrapping) {
+            wrap(next, dimensions);
+            yield next;
+        } else {
+            if (withinBounds(next, dimensions)) {
+                yield next;
             }
         }
     }

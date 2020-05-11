@@ -2,10 +2,23 @@ import * as collections from '../util/collections';
 import * as traverse from '../util/traverse';
 import * as b from '../beliefs';
 import * as w from '../model';
+import PathMap from '../util/PathMap';
 import Vec from '../util/vector';
 
-export default class Agent {
-    constructor(view: w.View) {
+export interface AgentParams {
+    DiscountRate: number;
+    RecentEnemiesTicks: number;
+}
+
+export class Agent {
+    constructor(view: w.View, public params: AgentParams = Agent.defaults()) {
+    }
+
+    static defaults(): AgentParams {
+        return {
+            DiscountRate: 1.07,
+            RecentEnemiesTicks: 10,
+        };
     }
 
     choose(beliefs: b.Beliefs): w.Action[] {
@@ -20,7 +33,7 @@ export default class Agent {
     private chooseSwitch(beliefs: b.Beliefs, actions: Map<string, w.Action>) {
         const recentEnemies =
             collections.toArray(beliefs.pacs.values())
-            .filter(p => p.team === w.Teams.Enemy && p.alive && (beliefs.tick - p.seenTick) < 10);
+            .filter(p => p.team === w.Teams.Enemy && p.alive && (beliefs.tick - p.seenTick) < this.params.RecentEnemiesTicks);
 
         for (const pac of this.pacsToControl(beliefs, actions)) {
             if (pac.abilityTick <= 0) {
@@ -46,32 +59,42 @@ export default class Agent {
     }
 
     private chooseMove(beliefs: b.Beliefs, actions: Map<string, w.Action>) {
-        const pellets = new Set<Vec>(this.findPellets(beliefs));
-        const pacs = new Set<b.Pac>(this.pacsToControl(beliefs, actions));
-
-        while (pacs.size > 0 && pellets.size > 0) {
-            let bestPac: b.Pac = null;
-            let bestPellet: Vec = null;
-            let bestDistance: number = Infinity;
-            for (const pac of pacs) {
-                const closestPellet = collections.minBy(pellets, pellet => Vec.l1(pac.pos, pellet));
-                const distance = Vec.l1(pac.pos, closestPellet);
-                if (distance < bestDistance) {
-                    bestPac = pac;
-                    bestPellet = closestPellet;
-                    bestDistance = distance;
-                }
-            }
-
-            if (bestPac && bestPellet) {
-                const action: w.MoveAction = { pac: bestPac.id, type: "move", target: bestPellet };
-                actions.set(bestPac.key, action);
-                pellets.delete(bestPellet);
-                pacs.delete(bestPac);
-            } else {
-                break;
+        const occupants: string[][] = collections.init2D(beliefs.width, beliefs.height, (x, y) => beliefs.cells[y][x].wall ? w.Tiles.Wall : null);
+        for (const pac of beliefs.pacs.values()) {
+            if (pac.seenTick === beliefs.tick) {
+                occupants[pac.pos.y][pac.pos.x] = pac.key;
             }
         }
+
+        const pellets = new Set<b.Cell>(this.findPellets(beliefs));
+        for (const pac of this.pacsToControl(beliefs, actions)) {
+            if (pellets.size <= 0) {
+                break;
+            }
+
+            const pathMap = PathMap.generate(
+                pac.pos,
+                beliefs,
+                (pos) => this.passable(occupants, pos, pac));
+            const closest = collections.maxBy(pellets, pellet => this.payoff(pellet.value, pathMap.cost(pellet.pos)));
+            if (closest && pathMap.cost(closest.pos) < Infinity) {
+                const next = pathMap.pathTo(closest.pos)[0];
+                const action: w.MoveAction = { pac: pac.id, type: "move", target: closest.pos };
+                actions.set(pac.key, action);
+
+                pellets.delete(closest); // No other pac can go for the same pellet
+                occupants[next.y][next.x] = pac.key; // Stop other pacs from using this square so we don't end up blocking each other
+            }
+        }
+    }
+
+    private payoff(value: number, ticks: number) {
+        return value / Math.pow(this.params.DiscountRate, ticks);
+    }
+
+    private passable(occupants: string[][], pos: Vec, pac: b.Pac): boolean {
+        const occupant = occupants[pos.y][pos.x];
+        return (!occupant || occupant === pac.key);
     }
 
     private chooseWait(beliefs: b.Beliefs, actions: Map<string, w.Action>) {
@@ -81,10 +104,11 @@ export default class Agent {
         }
     }
 
-    private* findPellets(beliefs: b.Beliefs): Iterable<Vec> {
+    private* findPellets(beliefs: b.Beliefs): Iterable<b.Cell> {
         for (const pos of traverse.all(beliefs)) {
-            if (beliefs.cells[pos.y][pos.x].pellet > 0) {
-                yield pos;
+            const cell = beliefs.cells[pos.y][pos.x];
+            if (cell.value > 0) {
+                yield cell;
             }
         }
     }
@@ -103,3 +127,5 @@ export default class Agent {
         }
     }
 }
+
+export default Agent;
