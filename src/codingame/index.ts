@@ -92,7 +92,7 @@ function main() {
             readNext(next);
 
             beliefs.update(next);
-            const actions = agent.choose(beliefs);
+            const actions = agent.choose(next, beliefs);
             console.log(actions.map(formatAction).join(' | '));
 
             tick++;

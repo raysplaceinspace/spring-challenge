@@ -30,7 +30,7 @@ export function testAgent() {
     });
 
     beliefs.update(next);
-    const actions = agent.choose(beliefs);
+    const actions = agent.choose(next, beliefs);
 
     if (actions.length < 1) {
         throw "No action";

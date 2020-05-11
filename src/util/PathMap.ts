@@ -17,26 +17,18 @@ export default class PathMap {
 
     public pathTo(target: Vec): Vec[] {
         const path = new Array<Vec>();
-        const visited = new Set<number>();
+
+        if (this.pathMap[target.y][target.x] === Infinity) {
+            console.error(`Unable to find path to ${target.string()}`);
+            return [target];
+        }
 
         let current = target;
-        let iteration = 0;
         while (!current.equals(this.from)) {
             path.unshift(current);
-            visited.add(current.hash());
 
             const next = this.previousNeighbour(current);
-            if (visited.has(next.hash())) {
-                console.error(`Unable to find path to ${target.string()}`);
-                break;
-            }
-
             current = next;
-
-            ++iteration;
-            if (iteration % 100 === 0) {
-                console.error(`Pathfinding ${iteration} ${current.string()}...`);
-            }
         }
 
         if (path.length === 0) {
@@ -68,16 +60,10 @@ export default class PathMap {
             const initial = new Neighbour(from, 0);
             result.assign(initial);
 
-            let iteration = 0;
             const neighbours = [initial];
             while (neighbours.length > 0) {
                 const neighbour = neighbours.shift();
                 result.expand(neighbour, passable, neighbours);
-
-                ++iteration;
-                if (iteration % 100 === 0) {
-                    console.error(`Pathmapping ${iteration}...`);
-                }
             }
         } else {
             // Probably a dead robot

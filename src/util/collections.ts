@@ -34,6 +34,14 @@ export function init2D<T>(width: number, height: number, initializer: (x: number
     return array;
 }
 
+export function clone2D<T>(source: T[][]): T[][] {
+    const array = new Array<T[]>();
+    for (let y = 0; y < source.length; ++y) {
+        array[y] = [...source[y]];
+    }
+    return array;
+}
+
 export function some<K, V>(collection: Iterable<V>, predicate: (value: V) => boolean): boolean {
     for (const value of collection) {
         if (predicate(value)) {
@@ -123,4 +131,14 @@ export function sum<T>(items: Iterable<T>, selector: (item: T) => number): numbe
         total += selector(item);
     }
     return total;
+}
+
+export function shuffle<T>(items: T[]): T[] {
+    const remaining = [...items];
+    const result = new Array<T>();
+    while (remaining.length > 0) {
+        const next = Math.floor(Math.random() * remaining.length);
+        result.push(...remaining.splice(next, 1));
+    }
+    return result;
 }
