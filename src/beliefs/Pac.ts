@@ -72,6 +72,11 @@ export class Pac {
     private seen(view: w.View, sensor: w.Pac) {
         if (this.form !== sensor.type) {
             this.abilityTick = view.tick;
+            console.error(`Detected ${this.key} changed form`);
+        }
+        if (Vec.l1(sensor.pos, this.pos) > (view.tick - this.seenTick)) {
+            this.abilityTick = view.tick;
+            console.error(`Detected ${this.key} speeding`);
         }
         this.pos = sensor.pos.clone();
         this.form = sensor.type;

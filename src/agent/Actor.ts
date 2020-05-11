@@ -30,7 +30,7 @@ export class Actor {
 
         const recentEnemies =
             collections.toArray(beliefs.pacs.values())
-            .filter(p => p.team === w.Teams.Enemy && p.alive && (beliefs.tick - p.seenTick) < this.params.RecentEnemiesTicks);
+            .filter(p => p.team === w.Teams.Enemy && p.alive && (beliefs.tick - p.seenTick) < this.params.NearbyEnemiesTicks);
 
         for (const pac of this.pacsToControl(beliefs, actions)) {
             if (pac.abilityTick <= 0) {
@@ -49,13 +49,18 @@ export class Actor {
     private chooseSpeed() {
         const beliefs = this.beliefs;
         const actions = this.actions;
-        
-        if (!this.params.UseSpeed) { return; }
+
+        const enemies =
+            collections.toArray(beliefs.pacs.values())
+            .filter(p => p.team === w.Teams.Enemy && p.alive && (beliefs.tick - p.seenTick) < this.params.SpeedTicks);
 
         for (const pac of this.pacsToControl(beliefs, actions)) {
             if (pac.abilityTick <= 0) {
-                const action: w.SpeedAction = { pac: pac.id, type: "speed" };
-                actions.set(pac.key, action);
+                const closestEnemy = collections.minBy(enemies, enemy => Vec.l1(pac.pos, enemy.pos));
+                if (closestEnemy && Vec.l1(pac.pos, closestEnemy.pos) > this.params.SpeedRange) {
+                    const action: w.SpeedAction = { pac: pac.id, type: "speed" };
+                    actions.set(pac.key, action);
+                }
             }
         }
     }
@@ -71,7 +76,7 @@ export class Actor {
             }
         }
 
-        const allPellets = collections.toArray(this.findPellets(beliefs));
+        const allCandidates = collections.toArray(this.generateCandidates(beliefs));
         const allPacsToControl = collections.toArray(this.pacsToControl(beliefs, actions));
 
         let bestMoves: w.MoveAction[] = null;
@@ -80,29 +85,29 @@ export class Actor {
         let iteration = 0;
         while (true) {
             const occupants = collections.clone2D(allOccupants);
-            const pellets = new Set<b.Cell>(allPellets);
+            const candidates = new Set<a.Candidate>(allCandidates);
 
             const moves = new Array<w.MoveAction>();
             let totalPayoff = 0;
 
             const pacsToControl = collections.shuffle(allPacsToControl);
             for (const pac of pacsToControl) {
-                if (pellets.size <= 0) { break; }
+                if (candidates.size <= 0) { break; }
 
                 const pathMap = PathMap.generate(
                     pac.pos,
                     beliefs,
-                    (pos) => this.passable(allOccupants, pos, pac));
-                const closest = collections.maxBy(pellets, pellet => this.payoff(pellet.value, pathMap.cost(pellet.pos)));
+                    (pos) => this.passable(occupants, pos, pac));
+                const closest = collections.maxBy(candidates, candidate => this.payoff(candidate, pac, pathMap));
                 const cost = pathMap.cost(closest.pos);
-                const payoff = this.payoff(closest.value, cost);
+                const payoff = this.payoff(closest, pac, pathMap);
                 if (closest && cost < Infinity) {
                     const next = pathMap.pathTo(closest.pos)[0];
-                    const action: w.MoveAction = { pac: pac.id, type: "move", target: closest.pos };
+                    const action: w.MoveAction = { pac: pac.id, type: "move", target: next };
                     moves.push(action);
 
                     totalPayoff += payoff;
-                    pellets.delete(closest); // No other pac can go for the same pellet
+                    candidates.delete(closest); // No other pac can go for the same pellet
                     occupants[next.y][next.x] = pac.key; // Stop other pacs from using this square so we don't end up blocking each other
                 }
             }
@@ -128,7 +133,16 @@ export class Actor {
         }
     }
 
-    private payoff(value: number, ticks: number) {
+    private payoff(candidate: a.Candidate, pac: b.Pac, pathMap: PathMap) {
+        const cost = pathMap.cost(candidate.pos);
+        if (candidate.requiredForm && pac.form !== candidate.requiredForm) {
+            return -this.params.Penalty;
+        }
+
+        return this.discount(candidate.value, cost);
+    }
+
+    private discount(value: number, ticks: number) {
         return value / Math.pow(this.params.DiscountRate, ticks);
     }
 
@@ -143,7 +157,11 @@ export class Actor {
         }
 
         const other = this.beliefs.pacs.get(occupant);
-        if (other && other.team === w.Teams.Enemy && other.seenTick === this.beliefs.tick && pac.form === this.dominate(other.form)) {
+        if (other
+            && other.team === w.Teams.Enemy
+            && other.seenTick === this.beliefs.tick
+            && pac.form === this.dominate(other.form)
+            && (this.beliefs.tick - other.abilityTick) < this.params.AbilityCooldown) {
             // We dominate the enemy
             return true;
         }
@@ -161,7 +179,17 @@ export class Actor {
         }
     }
 
-    private* findPellets(beliefs: b.Beliefs): Iterable<b.Cell> {
+    private* generateCandidates(beliefs: b.Beliefs): Iterable<a.Candidate> {
+        for (const enemy of beliefs.pacs.values()) {
+            if (enemy.team === w.Teams.Enemy && enemy.seenTick == beliefs.tick) {
+                yield {
+                    value: this.params.AttackValue,
+                    pos: enemy.pos,
+                    requiredForm: this.dominate(enemy.form),
+                };
+            }
+        }
+
         for (const pos of traverse.all(beliefs)) {
             const cell = beliefs.cells[pos.y][pos.x];
             if (cell.value > 0) {
