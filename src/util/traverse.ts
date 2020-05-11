@@ -15,7 +15,7 @@ export function* all(dimensions: Dimensions): Iterable<Vec> {
     }
 }
 
-export function* ray(dimensions: Dimensions, from: Vec, step: Vec, wrap: boolean = Wrap): Iterable<Vec> {
+export function* ray(dimensions: Dimensions, from: Vec, step: Vec, wrapping: boolean = Wrap): Iterable<Vec> {
     const current = from.clone();
 
     let limit = 0;
@@ -29,6 +29,24 @@ export function* ray(dimensions: Dimensions, from: Vec, step: Vec, wrap: boolean
     for (let i = 0; i < limit; ++i) {
         yield current.clone();
         current.add(step);
+
+        if (wrapping) {
+            wrap(current, dimensions);
+        }
+    }
+}
+
+export function wrap(pos: Vec, dims: Dimensions) {
+    if (pos.x < 0) {
+        pos.x += dims.width;
+    } else if (pos.x >= dims.width) {
+        pos.x -= dims.width;
+    }
+
+    if (pos.y < 0) {
+        pos.y += dims.height;
+    } else if (pos.y >= dims.height) {
+        pos.y -= dims.height;
     }
 }
 

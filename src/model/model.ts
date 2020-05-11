@@ -10,6 +10,12 @@ export namespace Tiles {
     export const Wall = '#';
 }
 
+export namespace Forms {
+    export const Scissors = "SCISSORS";
+    export const Paper = "PAPER";
+    export const Rock = "ROCK";
+}
+
 export interface View {
     tick: number;
 
@@ -40,6 +46,8 @@ export interface Pellet {
 export type Action =
     WaitAction
     | MoveAction
+    | SwitchAction
+    | SpeedAction
 
 export interface ActionBase {
     pac: number;
@@ -54,6 +62,15 @@ export interface WaitAction extends ActionBase {
 export interface MoveAction extends ActionBase {
     type: "move";
     target: Vec;
+}
+
+export interface SwitchAction extends ActionBase {
+    type: "switch";
+    form: string;
+}
+
+export interface SpeedAction extends ActionBase {
+    type: "speed";
 }
 
 export interface CellBelief {

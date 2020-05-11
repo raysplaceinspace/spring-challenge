@@ -10,7 +10,14 @@ export class Cell {
     constructor(public pos: Vec) {
     }
 
-    static init(view: w.View, x: number, y: number): Cell {
+    static initializeCells(view: w.View): Cell[][] {
+        return collections.init2D(
+            view.width,
+            view.height,
+            (x, y) => Cell.init(view, x, y));
+    }
+
+    private static init(view: w.View, x: number, y: number): Cell {
         const cell = new Cell(new Vec(x, y));
         cell.pellet = view.map[y][x] === w.Tiles.Blank ? 1 : 0;
         cell.seenTick = view.tick;
@@ -25,7 +32,6 @@ export class Cell {
             for (const heading of traverse.headings()) {
                 for (const pos of traverse.ray(view, pac.pos, heading)) {
                     if (view.map[pos.y][pos.x] === w.Tiles.Wall) { break; }
-
                     cells[pos.y][pos.x].seen(view.tick, 0);
                 }
             }
@@ -37,7 +43,7 @@ export class Cell {
         }
     }
 
-    seen(tick: number, pellet: number) {
+    private seen(tick: number, pellet: number) {
         this.pellet = pellet;
         this.seenTick = tick;
     }

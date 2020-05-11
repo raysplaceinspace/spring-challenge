@@ -71,6 +71,8 @@ function formatActionIntent(action: w.Action) {
     switch (action.type) {
         case "wait": return `WAIT ${action.pac}`;
         case "move": return `MOVE ${action.pac} ${action.target.x} ${action.target.y}`;
+        case "switch": return `SWITCH ${action.pac} ${action.form}`;
+        case "speed": return `SPEED ${action.pac}`;
         default: return "NULL";
     }
 }
@@ -90,7 +92,7 @@ function main() {
             readNext(next);
 
             beliefs.update(next);
-            const actions = agent.choose(next, beliefs);
+            const actions = agent.choose(beliefs);
             console.log(actions.map(formatAction).join(' | '));
 
             tick++;
