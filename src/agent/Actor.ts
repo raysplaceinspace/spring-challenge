@@ -171,7 +171,7 @@ export class Actor {
         const beliefs = this.beliefs;
         const allOccupants: string[][] = collections.init2D(beliefs.width, beliefs.height, (x, y) => beliefs.cells[y][x].wall ? w.Tiles.Wall : null);
         for (const pac of beliefs.pacs.values()) {
-            if (pac.seenTick === beliefs.tick) {
+            if (pac.seenTick === beliefs.tick && pac.alive) {
                 allOccupants[pac.pos.y][pac.pos.x] = pac.key;
             }
         }
@@ -205,6 +205,7 @@ export class Actor {
         const enemy = this.beliefs.pacs.get(occupant);
         if (enemy
             && enemy.team === w.Teams.Enemy
+            && enemy.alive
             && enemy.seenTick === this.beliefs.tick
             && pac.form === this.dominate(enemy.form)
             && this.beliefs.tick < enemy.abilityCooldownUntilTick) {
@@ -227,7 +228,7 @@ export class Actor {
 
     private* generateCandidates(beliefs: b.Beliefs): Iterable<a.Candidate> {
         for (const enemy of beliefs.pacs.values()) {
-            if (enemy.team === w.Teams.Enemy && enemy.seenTick == beliefs.tick) {
+            if (enemy.team === w.Teams.Enemy && enemy.seenTick == beliefs.tick && enemy.alive) {
                 yield {
                     value: this.params.AttackValue,
                     pos: enemy.pos,

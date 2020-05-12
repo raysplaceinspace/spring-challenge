@@ -56,17 +56,9 @@ export class Pac {
         }
 
         // Incremental update
-        const dead = new Set<Pac>(collections.filter(pacs.values(), p => p.team === w.Teams.Self && p.alive));
         for (const sensor of view.pacs) {
             const pac = pacs.get(Pac.key(sensor.team, sensor.id));
             pac.seen(view, sensor);
-            dead.delete(pac);
-        }
-
-        // Detect dead self pacs
-        for (const pac of dead) {
-            console.error(`Pac ${pac.key} dead`);
-            pac.alive = false;
         }
     }
 
@@ -81,12 +73,15 @@ export class Pac {
             console.error(`Detected ${this.key} abilityCooldown=${sensor.abilityCooldown}`);
         }
 
-        this.pos = sensor.pos.clone();
-        this.form = sensor.type;
-        this.seenTick = view.tick;
-
-        this.abilityCooldownUntilTick = sensor.abilityCooldown ? view.tick + sensor.abilityCooldown : 0;
-        this.speedUntilTick = sensor.speedTurnsLeft ? view.tick + sensor.speedTurnsLeft : 0;
+        if (sensor.type === w.Forms.Dead) {
+            this.alive = false;
+        } else {
+            this.pos = sensor.pos.clone();
+            this.form = sensor.type;
+            this.seenTick = view.tick;
+            this.abilityCooldownUntilTick = sensor.abilityCooldown ? view.tick + sensor.abilityCooldown : 0;
+            this.speedUntilTick = sensor.speedTurnsLeft ? view.tick + sensor.speedTurnsLeft : 0;
+        }
     }
 }
 

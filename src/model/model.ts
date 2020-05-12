@@ -14,6 +14,7 @@ export namespace Forms {
     export const Scissors = "SCISSORS";
     export const Paper = "PAPER";
     export const Rock = "ROCK";
+    export const Dead = "DEAD";
 }
 
 export interface View {
