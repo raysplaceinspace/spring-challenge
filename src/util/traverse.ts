@@ -57,14 +57,32 @@ export function withinBounds(p: Vec, dimensions: Dimensions) {
 export function* neighbours(pos: Vec, dimensions: Dimensions, wrapping = Wrap): Iterable<Vec> {
     for (const heading of headings()) {
         const next = pos.clone().add(heading);
-        if (wrapping) {
-            wrap(next, dimensions);
+        if (wrapOrFilter(next, dimensions, wrapping)) {
             yield next;
-        } else {
-            if (withinBounds(next, dimensions)) {
-                yield next;
+        }
+    }
+}
+
+export function* untilRange(from: Vec, maxDistance: number, dimensions: Dimensions, wrapping = Wrap): Iterable<Vec> {
+    for (let y = -maxDistance; y <= maxDistance; ++y) {
+        for (let x = -maxDistance; x <= maxDistance; ++x) {
+            const offset = new Vec(x, y);
+            if (offset.l1() <= maxDistance) {
+                const pos = from.clone().add(offset);
+                if (wrapOrFilter(pos, dimensions, wrapping)) {
+                    yield pos;
+                }
             }
         }
+    }
+}
+
+function wrapOrFilter(pos: Vec, dimensions: Dimensions, wrapping = Wrap) {
+    if (wrapping) {
+        wrap(pos, dimensions);
+        return true;
+    } else {
+        return withinBounds(pos, dimensions);
     }
 }
 

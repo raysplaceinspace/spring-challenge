@@ -185,14 +185,19 @@ export class Actor {
         const selfLocations = new Set<number>();
         for (const pac of beliefs.pacs.values()) {
             if (pac.team === w.Teams.Self && pac.alive && pac.seenTick === beliefs.tick) {
-                selfLocations.add(pac.pos.hash());
+                for (const n of traverse.untilRange(pac.pos, this.maxMovementSpeed(pac), this.beliefs)) {
+                    // Detect all locations this pac could move to
+                    selfLocations.add(n.hash());
+                }
             }
         }
         for (const enemy of beliefs.pacs.values()) {
             if (enemy.team === w.Teams.Enemy && enemy.alive && enemy.seenTick === beliefs.tick) {
-                const p = enemy.pos;
-                if (selfLocations.has(p.hash()) && !allOccupants[p.y][p.x]) {
-                    allOccupants[p.y][p.x] = enemy.key;
+                for (const n of traverse.untilRange(enemy.pos, this.maxMovementSpeed(enemy), this.beliefs)) {
+                    if (selfLocations.has(n.hash()) && !allOccupants[n.y][n.x]) {
+                        // Detected the enemy could move to the same square as us
+                        allOccupants[n.y][n.x] = enemy.key;
+                    }
                 }
             }
         }

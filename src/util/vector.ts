@@ -74,6 +74,10 @@ export default class Vec {
         return Math.sqrt(this.x * this.x + this.y * this.y);
     }
 
+    l1() {
+        return Math.abs(this.x) + Math.abs(this.y);
+    }
+
     angle() {
         return Math.atan2(this.y, this.x);
     }
