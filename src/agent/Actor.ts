@@ -62,7 +62,7 @@ export class Actor {
 
     private maxMovementSpeed(pac: b.Pac): number {
         if (this.beliefs.tick < pac.speedUntilTick // Currently speeding
-            || pac.abilityCooldownUntilTick < this.beliefs.tick) { // Or has the ability to speed
+            || (pac.team === w.Teams.Enemy && pac.abilityCooldownUntilTick < this.beliefs.tick)) { // Or has the ability to speed
             return 2;
         } else {
             return 1;
