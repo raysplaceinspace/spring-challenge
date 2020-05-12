@@ -1,11 +1,9 @@
 import Vec from "../util/vector";
 
 export interface AgentParams {
-    AbilityCooldown: number;
     DiscountRate: number;
     AttackValue: number;
     NearbyEnemiesTicks: number;
-    NearbyEnemyRange: number;
     MoveTimeoutMilliseconds: number;
     Penalty: number;
     SpeedRange: number;
@@ -21,13 +19,11 @@ export interface Candidate {
 export function defaultParams(): AgentParams {
     return {
         DiscountRate: 1.07,
-        AbilityCooldown: 5,
         AttackValue: 0,
-        NearbyEnemiesTicks: 3,
-        NearbyEnemyRange: 3,
+        NearbyEnemiesTicks: 10,
         MoveTimeoutMilliseconds: 40,
         Penalty: 1000,
         SpeedTicks: 10,
-        SpeedRange: 10,
+        SpeedRange: 5,
     };
 }

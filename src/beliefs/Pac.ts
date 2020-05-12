@@ -5,9 +5,9 @@ import Vec from '../util/vector';
 
 export class Pac {
     public seenTick = 0;
-    public abilityTick = 0;
+    public abilityCooldownUntilTick = 0;
     public alive = true;
-    public speedTicksRemaining = 0;
+    public speedUntilTick = 0;
 
     constructor(
         public id: number,
@@ -72,18 +72,21 @@ export class Pac {
 
     private seen(view: w.View, sensor: w.Pac) {
         if (this.form !== sensor.type) {
-            this.abilityTick = view.tick;
             console.error(`Detected ${this.key} changed form`);
         }
-        if (Vec.l1(sensor.pos, this.pos) > (view.tick - this.seenTick)) {
-            this.abilityTick = view.tick;
+        if (sensor.speedTurnsLeft > 0) {
             console.error(`Detected ${this.key} speeding`);
         }
+        if (sensor.abilityCooldown > 0) {
+            console.error(`Detected ${this.key} abilityCooldown=${sensor.abilityCooldown}`);
+        }
+
         this.pos = sensor.pos.clone();
         this.form = sensor.type;
         this.seenTick = view.tick;
-        this.abilityTick = sensor.abilityCooldown;
-        this.speedTicksRemaining = sensor.speedTurnsLeft;
+
+        this.abilityCooldownUntilTick = sensor.abilityCooldown ? view.tick + sensor.abilityCooldown : 0;
+        this.speedUntilTick = sensor.speedTurnsLeft ? view.tick + sensor.speedTurnsLeft : 0;
     }
 }
 
