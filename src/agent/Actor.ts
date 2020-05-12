@@ -203,7 +203,6 @@ export class Actor {
         }
 
         return allOccupants;
-
     }
 
     private payoff(candidate: a.Candidate, pac: b.Pac, pathMap: PathMap) {
