@@ -169,12 +169,34 @@ export class Actor {
 
     private generateOccupants() {
         const beliefs = this.beliefs;
+
         const allOccupants: string[][] = collections.init2D(beliefs.width, beliefs.height, (x, y) => beliefs.cells[y][x].wall ? w.Tiles.Wall : null);
+
+        // Occupying pacs
         for (const pac of beliefs.pacs.values()) {
-            if (pac.seenTick === beliefs.tick && pac.alive) {
-                allOccupants[pac.pos.y][pac.pos.x] = pac.key;
+            if (!(pac.seenTick === beliefs.tick && pac.alive)) {
+                continue;
+            }
+
+            allOccupants[pac.pos.y][pac.pos.x] = pac.key;
+        }
+
+        // Identify collisions with enemy in the next turn and avoid
+        const selfLocations = new Set<number>();
+        for (const pac of beliefs.pacs.values()) {
+            if (pac.team === w.Teams.Self && pac.alive && pac.seenTick === beliefs.tick) {
+                selfLocations.add(pac.pos.hash());
             }
         }
+        for (const enemy of beliefs.pacs.values()) {
+            if (enemy.team === w.Teams.Enemy && enemy.alive && enemy.seenTick === beliefs.tick) {
+                const p = enemy.pos;
+                if (selfLocations.has(p.hash()) && !allOccupants[p.y][p.x]) {
+                    allOccupants[p.y][p.x] = enemy.key;
+                }
+            }
+        }
+
         return allOccupants;
 
     }
