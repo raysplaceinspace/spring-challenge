@@ -2,7 +2,6 @@ import Vec from "../util/vector";
 
 export interface AgentParams {
     DiscountRate: number;
-    AttackValue: number;
     NearbyEnemiesTicks: number;
     MoveTimeoutMilliseconds: number;
     Penalty: number;
@@ -19,7 +18,6 @@ export interface Candidate {
 export function defaultParams(): AgentParams {
     return {
         DiscountRate: 1.07,
-        AttackValue: 0,
         NearbyEnemiesTicks: 10,
         MoveTimeoutMilliseconds: 40,
         Penalty: 1000,

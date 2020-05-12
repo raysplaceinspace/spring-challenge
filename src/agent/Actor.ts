@@ -227,22 +227,52 @@ export class Actor {
     }
 
     private* generateCandidates(beliefs: b.Beliefs): Iterable<a.Candidate> {
-        for (const enemy of beliefs.pacs.values()) {
-            if (enemy.team === w.Teams.Enemy && enemy.seenTick == beliefs.tick && enemy.alive) {
-                yield {
-                    value: this.params.AttackValue,
-                    pos: enemy.pos,
-                    requiredForm: this.dominate(enemy.form),
-                };
-            }
-        }
-
+        const valueProbabilities = this.generateValueProbabilities();
         for (const pos of traverse.all(beliefs)) {
             const cell = beliefs.cells[pos.y][pos.x];
             if (cell.value > 0) {
-                yield cell;
+                yield {
+                    value: cell.value * valueProbabilities[pos.y][pos.x],
+                    pos,
+                };
             }
         }
+    }
+
+    private generateValueProbabilities(): number[][] {
+        const result = collections.create2D(this.beliefs.width, this.beliefs.height, 1);
+
+        for (const enemy of this.beliefs.pacs.values()) {
+            if (!(enemy.alive && enemy.team === w.Teams.Enemy)) {
+                continue;
+            }
+
+            const seenAge = this.beliefs.tick - enemy.seenTick;
+            const pathMap = PathMap.generate(enemy.pos, this.beliefs, p => !this.beliefs.cells[p.y][p.x].wall);
+            const isochrones = pathMap.isochrones(seenAge);
+
+            let maxNumCells = 1;
+            for (let range = 0; range < isochrones.length; ++range) {
+                const isochrone = isochrones[range];
+                if (!isochrone) { continue; }
+
+                const numCells = isochrone.length;
+                if (numCells > maxNumCells) {
+                    maxNumCells = numCells;
+                }
+
+                const visitProbability = 1.0 / maxNumCells;
+                const arrivalTick = enemy.seenTick + range;
+                for (const pos of isochrone) {
+                    const seenTick = this.beliefs.cells[pos.y][pos.x].seenTick;
+                    if (seenTick < arrivalTick) { // If we have seen the cell after the enemy could have arrived, then we already know the truth
+                        result[pos.y][pos.x] *= 1 - visitProbability; // Reduce value by the probability the enemy has not touched this square
+                    }
+                }
+            }
+        }
+
+        return result;
     }
 
 

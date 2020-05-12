@@ -39,6 +39,25 @@ export default class PathMap {
         return path;
     }
 
+    public isochrones(maxCost: number): Vec[][] {
+        const result = new Array<Vec[]>();
+
+        for (const pos of traverse.all(this.bounds)) {
+            const cost = this.pathMap[pos.y][pos.x];
+            if (cost <= maxCost) {
+                const key = Math.floor(cost);
+                let isochrone = result[key];
+                if (!isochrone) {
+                    result[key] = isochrone = [];
+                }
+
+                isochrone.push(pos);
+            }
+        }
+
+        return result;
+    }
+
     private previousNeighbour(current: Vec) {
         let best: Vec = null;
         let bestCost: number = Infinity;

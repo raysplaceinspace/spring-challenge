@@ -63,16 +63,6 @@ export class Pac {
     }
 
     private seen(view: w.View, sensor: w.Pac) {
-        if (this.form !== sensor.type) {
-            console.error(`Detected ${this.key} changed form`);
-        }
-        if (sensor.speedTurnsLeft > 0) {
-            console.error(`Detected ${this.key} speeding`);
-        }
-        if (sensor.abilityCooldown > 0) {
-            console.error(`Detected ${this.key} abilityCooldown=${sensor.abilityCooldown}`);
-        }
-
         if (sensor.type === w.Forms.Dead) {
             this.alive = false;
         } else {
