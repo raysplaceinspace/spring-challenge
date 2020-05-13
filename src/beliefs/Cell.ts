@@ -33,7 +33,7 @@ export class Cell {
     }
 
     static update(view: w.View, cells: Cell[][]) {
-        // Update what we can see
+        // Update what we can see from our pacs
         for (const pac of view.pacs) {
             if (pac.team !== w.Teams.Self) { continue; }
 
@@ -46,6 +46,17 @@ export class Cell {
         }
         for (const pellet of view.pellets) {
             cells[pellet.pos.y][pellet.pos.x].seen(view.tick, pellet.value);
+        }
+
+        // When super pellets disappear, we know that for sure
+        for (const pos of traverse.all(view)) {
+            const cell = cells[pos.y][pos.x];
+            if (cell.value > 1 // Super pellet
+                && cell.seenTick < view.tick) { // Not seen this tick
+                
+                cell.seen(view.tick, 0);
+                console.error(`Super pellet ${pos.string()} taken`);
+            }
         }
     }
 
