@@ -13,7 +13,7 @@ interface Occupant {
     dominateWith?: string;
 }
 
-interface PathMapCacheItem {
+interface PathMapCacheItem { // Treat as immutable
     pathMap: PathMap;
     nowNotPassable: Vec[];
 }
@@ -117,8 +117,12 @@ export class OccupantMap {
     block(pos: Vec, pac: b.Pac) {
         this.occupants[pos.y][pos.x] = OccupantMap.pacOccupant(pac, this.beliefs);
 
-        for (const cacheItem of this.pathMapCache.values()) {
-            cacheItem.nowNotPassable.push(pos.clone());
+        for (const key of this.pathMapCache.keys()) {
+            const cacheItem = this.pathMapCache.get(key);
+            this.pathMapCache.set(key, {
+                ...cacheItem,
+                nowNotPassable: [...cacheItem.nowNotPassable, pos.clone()],
+            });
         }
     }
 
