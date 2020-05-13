@@ -10,15 +10,12 @@ export interface PathLimits {
     maxCost?: number;
 }
 
-interface Assignment {
-    cost: number;
-    from: Vec;
-}
-
 export default class PathMap {
     public assignments = 0;
+    private pathMap: Cell[][];
 
-    private constructor(public from: Vec, public bounds: traverse.Dimensions, private pathMap: Assignment[][]) {
+    private constructor(public from: Vec, public bounds: traverse.Dimensions) {
+        this.pathMap = collections.create2D<Cell>(bounds.width, bounds.height, null);
     }
 
     public cost(target: Vec) {
@@ -94,46 +91,49 @@ export default class PathMap {
     }
 
     public static generate(from: Vec, bounds: traverse.Dimensions, passable: PassableCallback, limits?: PathLimits): PathMap {
-        const pathMap = collections.create2D<Assignment>(bounds.width, bounds.height, null);
-        const result = new PathMap(from, bounds, pathMap);
+        const pathMap = new PathMap(from, bounds);
         
         if (traverse.withinBounds(from, bounds)) {
-            const initial = new Neighbour(from, 0);
-            result.assign(initial, null);
-
-            const maxCost = limits?.maxCost ?? Infinity;
-            let numIterations = 0;
-            const neighbours = [initial];
-            while (neighbours.length > 0) {
-                const neighbour = neighbours.shift();
-                if (neighbour.cost >= maxCost) { break; }
-
-                result.expand(neighbour, passable, neighbours);
-
-                ++numIterations;
-                if (Debug && numIterations % 100 === 0) {
-                    console.error(`Pathmapping ${numIterations}, neighbours=${neighbours.length}...`);
-                }
-            }
-        } else {
-            // Probably a dead robot
+            const initial = new Cell(from, null, 0);
+            pathMap.expandAll([initial], passable, limits);
         }
 
-        return result;
+        return pathMap;
     }
 
-    private assign(neighbour: Neighbour, from: Vec) {
+    private expandAll(initial: Cell[], passable: PassableCallback, limits?: PathLimits) {
+        for (const cell of initial) {
+            this.assign(cell);
+        }
+
+        const maxCost = limits?.maxCost ?? Infinity;
+        let numIterations = 0;
+        const neighbours = [...initial];
+        while (neighbours.length > 0) {
+            const neighbour = neighbours.shift();
+            if (neighbour.cost >= maxCost) { break; }
+
+            this.expand(neighbour, passable, neighbours);
+
+            ++numIterations;
+            if (Debug && numIterations % 100 === 0) {
+                console.error(`Pathmapping ${numIterations}, neighbours=${neighbours.length}...`);
+            }
+        }
+    }
+
+    private assign(neighbour: Cell) {
         const pos = neighbour.pos;
         const cost = neighbour.cost;
 
         const previous = this.pathMap[pos.y][pos.x];
         if (!previous || cost < previous.cost) {
-            this.pathMap[pos.y][pos.x] = { cost, from };
+            this.pathMap[pos.y][pos.x] = neighbour;
             ++this.assignments;
         }
     }
 
-    private expand(from: Neighbour, passable: PassableCallback, neighbours: Neighbour[]) {
+    private expand(from: Cell, passable: PassableCallback, neighbours: Cell[]) {
         const pos = from.pos;
         const cost = from.cost;
 
@@ -149,14 +149,14 @@ export default class PathMap {
 
             let next = cost + 1;
             if (next < this.cost(n)) {
-                const neighbour = new Neighbour(n, next);
-                this.assign(neighbour, from.pos);
+                const neighbour = new Cell(n, from.pos, next);
+                this.assign(neighbour);
                 this.insertNeighbour(neighbour, neighbours);
             }
         }
     }
 
-    private insertNeighbour(toInsert: Neighbour, neighbours: Neighbour[]) {
+    private insertNeighbour(toInsert: Cell, neighbours: Cell[]) {
         let i = this.findInsertionPosition(toInsert, neighbours);
         if (i < neighbours.length) {
             neighbours.splice(i, 0, toInsert);
@@ -165,7 +165,7 @@ export default class PathMap {
         }
     }
 
-    private findInsertionPosition(toInsert: Neighbour, neighbours: Neighbour[]) {
+    private findInsertionPosition(toInsert: Cell, neighbours: Cell[]) {
         if (neighbours.length === 0) {
             return 0;
         } else if (toInsert.cost <= neighbours[0].cost) {
@@ -177,7 +177,7 @@ export default class PathMap {
         }
     }
 
-    private binarySearchInsertionPosition(toInsert: Neighbour, neighbours: Neighbour[], lower: number, upper: number): number {
+    private binarySearchInsertionPosition(toInsert: Cell, neighbours: Cell[], lower: number, upper: number): number {
         if (upper >= lower) {
             return lower;
         }
@@ -194,7 +194,7 @@ export default class PathMap {
     }
 }
 
-class Neighbour {
-    constructor(public pos: Vec, public cost: number) {
+class Cell {
+    constructor(public pos: Vec, public from: Vec, public cost: number) {
     }
 }
