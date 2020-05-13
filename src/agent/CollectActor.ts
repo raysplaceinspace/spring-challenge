@@ -9,6 +9,7 @@ import PathMap from '../util/PathMap';
 import PayoffMap from './PayoffMap';
 import ValueMap from './ValueMap';
 import Vec from '../util/vector';
+import { factorial } from '../util/math';
 
 interface CollectCandidate {
     moves: w.MoveAction[];
@@ -35,9 +36,12 @@ export class CollectActor {
         let best: CollectCandidate = null;
         let numIterations = 0;
 
+        const numCombinations = factorial(pacsToControl.length);
+        const combinations = collections.shuffle(collections.toArray(collections.range(numCombinations)));
+
         const collectStart = Date.now();
-        while (true) {
-            const candidate = this.chooseOne(pacsToControl);
+        for (const combination of combinations) {
+            const candidate = this.chooseOne(this.sequence(pacsToControl, combination));
             if (!best || candidate.payoff > best.payoff) {
                 best = candidate;
             }
@@ -59,7 +63,18 @@ export class CollectActor {
         }
 
         const elapsed = Date.now() - this.start;
-        console.error(`Chose moves for ${pacsToControl.length} pacs after ${numIterations} iterations (${elapsed} ms)`);
+        console.error(`Chose moves for ${pacsToControl.length} pacs after ${numIterations}/${numCombinations} iterations (${elapsed} ms)`);
+    }
+
+    private sequence(pacsToControl: b.Pac[], sequenceNumber: number) {
+        const remaining = [...pacsToControl];
+        const result = new Array<b.Pac>();
+        while (remaining.length > 0) {
+            const index = sequenceNumber % remaining.length;
+            sequenceNumber = Math.floor(sequenceNumber / remaining.length);
+            result.push(...remaining.splice(index, 1));
+        }
+        return result;
     }
 
     private chooseOne(pacsToControl: b.Pac[]): CollectCandidate {
@@ -70,7 +85,7 @@ export class CollectActor {
         const moves = new Array<w.MoveAction>();
         let totalPayoff = 0;
 
-        for (const pac of collections.shuffle(pacsToControl)) { // Try a random order of pacs each time
+        for (const pac of pacsToControl) { // Try a random order of pacs each time
             const pathMap = occupants.pathfind(pac);
             const payoffMap = PayoffMap.generate(pac, this.beliefs, valueMap, pathMap, this.params);
 
