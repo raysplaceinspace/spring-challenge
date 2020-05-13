@@ -10,6 +10,11 @@ export interface AgentParams {
     SpeedTicks: number;
 }
 
+export interface TargetCandidate {
+    target: Vec;
+    payoff: number;
+}
+
 export function defaultParams(): AgentParams {
     return {
         DiscountRate: 1.2,
