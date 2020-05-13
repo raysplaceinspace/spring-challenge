@@ -81,6 +81,21 @@ export function maxBy<T>(items: Iterable<T>, selector: (item: T) => number): T {
     return current;
 }
 
+export function min<T>(items: Iterable<number>): number {
+    let current = undefined;
+    let currentValue = Infinity;
+
+    for (const item of items) {
+        const value = item;
+        if (value < currentValue) {
+            currentValue = value;
+            current = item;
+        }
+    }
+
+    return current;
+}
+
 export function* map<T, V>(items: Iterable<T>, selector: (item: T) => V): Iterable<V> {
     for (const item of items) {
         yield selector(item);

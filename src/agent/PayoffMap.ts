@@ -8,6 +8,7 @@ import PathMap from '../util/PathMap';
 import ValueMap from './ValueMap';
 import Vec from '../util/vector';
 
+const Debug = false;
 
 export class PayoffMap {
     private constructor(private beliefs: b.Beliefs, private payoffs: number[][]) {
@@ -25,6 +26,10 @@ export class PayoffMap {
                 const currentPayoff = AgentHelper.discount(valueMap.value(current), range, params);
                 payoffMap[current.y][current.x] = currentPayoff + previousPayoff;
             }
+        }
+
+        if (Debug) {
+            console.error(`Generated payoff map from ${isochrones.filter(x => !!x).length} isochrones`);
         }
 
         return new PayoffMap(beliefs, payoffMap);

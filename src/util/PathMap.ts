@@ -14,7 +14,7 @@ export default class PathMap {
     public assignments = 0;
     private pathMap: Cell[][];
 
-    private constructor(public from: Vec, public bounds: traverse.Dimensions, private passable: boolean[][]) {
+    private constructor(public from: Vec, public bounds: traverse.Dimensions, private passable: boolean[][], private limits: PathLimits) {
         this.pathMap = collections.create2D<Cell>(bounds.width, bounds.height, null);
     }
 
@@ -90,35 +90,108 @@ export default class PathMap {
         return assignment?.from;
     }
 
-    public static generate(from: Vec, bounds: traverse.Dimensions, passable: PassableCallback, limits?: PathLimits): PathMap {
+    public static generate(from: Vec, bounds: traverse.Dimensions, passable: PassableCallback, limits: PathLimits = {}): PathMap {
         const passableMap = collections.init2D(bounds.width, bounds.height, (x, y) => passable(x, y));
-        const pathMap = new PathMap(from, bounds, passableMap);
+        const pathMap = new PathMap(from, bounds, passableMap, limits);
         
         if (traverse.withinBounds(from, bounds)) {
             const initial = new Cell(from, null, 0);
-            pathMap.expandAll([initial], limits);
+            pathMap.expandAll([initial]);
         }
 
         return pathMap;
     }
 
-    private expandAll(initial: Cell[], limits?: PathLimits) {
-        for (const cell of initial) {
-            this.assign(cell);
+    public forward(): Array<Vec>[][] {
+        const bounds = this.bounds;
+        const forwardMap = collections.init2D(bounds.width, bounds.height, () => new Array<Vec>());
+        for (const n of traverse.all(bounds)) {
+            const previous = this.previousNeighbour(n);
+            if (previous) {
+                forwardMap[previous.y][previous.x].push(n);
+            }
+        }
+        return forwardMap;
+    }
+
+    public reevaluate(passable: PassableCallback): PathMap {
+        const bounds = this.bounds;
+        const passableMap = collections.init2D(bounds.width, bounds.height, (x, y) => passable(x, y));
+        const clone = new PathMap(this.from, bounds, passableMap, this.limits);
+
+        const cellsMadePassable = new Array<Vec>();
+        const cellsMadeNotPassable = new Array<Vec>();
+        for (const n of traverse.all(bounds)) {
+            const oldPassable = this.passable[n.y][n.x];
+            const newPassable = this.passable[n.y][n.x];
+            if (newPassable === oldPassable) {
+                continue;
+            }
+
+            if (oldPassable && !newPassable) {
+                cellsMadeNotPassable.push(n);
+            }
+
+            if (!oldPassable && newPassable) {
+                cellsMadePassable.push(n);
+            }
         }
 
-        const maxCost = limits?.maxCost ?? Infinity;
+        // If a cell has been made passable, need to recompute everything beyond that range
+        const maxCost = Math.max(1, collections.min(cellsMadePassable.map(n => this.cost(n))) ?? Infinity);
+        for (const n of traverse.all(bounds)) {
+            const cell = this.pathMap[n.y][n.x];
+            if (cell && cell.cost < maxCost) {
+                clone.pathMap[n.y][n.x] = cell;
+            }
+        }
+
+        // If a cell has been made impassable, clear everything that went through that cell
+        const forwardMap = clone.forward();
+        for (const cell of cellsMadeNotPassable) {
+            clone.clearBeyond(cell, forwardMap);
+        }
+
+        // Recalculate
+        const initial = new Array<Cell>();
+        for (const n of traverse.all(bounds)) {
+            const cell = clone.pathMap[n.y][n.x];
+            if (cell) {
+                initial.push(cell);
+            }
+        }
+        clone.expandAll(initial);
+
+        return clone;
+    }
+
+    private clearBeyond(pos: Vec, forwardMap: Array<Vec>[][]) {
+        this.pathMap[pos.y][pos.x] = null;
+
+        const allNext = forwardMap[pos.y][pos.x];
+        for (const next of allNext) {
+            this.clearBeyond(next, forwardMap);
+        }
+    }
+
+    private expandAll(initial: Cell[]) {
+        const queue = new NeighbourQueue();
+        for (const cell of initial) {
+            this.assign(cell);
+            queue.insert(cell);
+        }
+
+        const maxCost = this.limits.maxCost ?? Infinity;
         let numIterations = 0;
-        const neighbours = [...initial];
-        while (neighbours.length > 0) {
-            const neighbour = neighbours.shift();
+        while (queue.length > 0) {
+            const neighbour = queue.shift();
             if (neighbour.cost >= maxCost) { break; }
 
-            this.expand(neighbour, neighbours);
+            this.expand(neighbour, queue);
 
             ++numIterations;
             if (Debug && numIterations % 100 === 0) {
-                console.error(`Pathmapping ${numIterations}, neighbours=${neighbours.length}...`);
+                console.error(`Pathmapping ${numIterations}, neighbours=${queue.length}...`);
             }
         }
     }
@@ -134,7 +207,7 @@ export default class PathMap {
         }
     }
 
-    private expand(from: Cell, neighbours: Cell[]) {
+    private expand(from: Cell, neighbours: NeighbourQueue) {
         const pos = from.pos;
         const cost = from.cost;
 
@@ -152,12 +225,25 @@ export default class PathMap {
             if (next < this.cost(n)) {
                 const neighbour = new Cell(n, from.pos, next);
                 this.assign(neighbour);
-                this.insertNeighbour(neighbour, neighbours);
+                neighbours.insert(neighbour);
             }
         }
     }
+}
 
-    private insertNeighbour(toInsert: Cell, neighbours: Cell[]) {
+class NeighbourQueue {
+    private items = new Array<Cell>();
+
+    public get length() {
+        return this.items.length;
+    }
+
+    public shift() {
+        return this.items.shift();
+    }
+
+    insert(toInsert: Cell) {
+        const neighbours = this.items;
         let i = this.findInsertionPosition(toInsert, neighbours);
         if (i < neighbours.length) {
             neighbours.splice(i, 0, toInsert);

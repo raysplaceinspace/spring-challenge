@@ -15,20 +15,29 @@ export function testAgent() {
     const beliefs = new Beliefs(initial);
     const agent = new Agent(initial);
 
-    const next = w.clone(initial);
+    let next = w.clone(initial);
     next.pacs.push({
         id: 0,
         team: w.Teams.Self,
         pos: new Vec(2, 1),
         type: w.Forms.Rock,
-        speedTurnsLeft: 1,
+        speedTurnsLeft: 0,
         abilityCooldown: 0,
     });
     next.pellets.push({
         pos: new Vec(2, 3),
         value: 1,
     });
+    tick(next, agent, beliefs);
 
+    next = w.clone(next);
+    next.tick++;
+    next.pacs[0].abilityCooldown = 10;
+
+    tick(next, agent, beliefs);
+}
+
+function tick(next: w.View, agent: Agent, beliefs: Beliefs) {
     beliefs.update(next);
     const actions = agent.choose(next, beliefs);
 
