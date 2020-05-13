@@ -35,14 +35,18 @@ export class Beliefs {
     }
 
     private updateStillAvailableProbabilities(start = Date.now()) {
+        let numEnemies = 0;
         let numUpdates = 0;
         for (const enemy of this.pacs.values()) {
             if (!(enemy.alive && enemy.team === w.Teams.Enemy)) {
                 continue;
             }
+            ++numEnemies;
 
             const seenAge = this.tick - enemy.seenTick;
-            const pathMap = PathMap.generate(enemy.pos, this, p => !this.cells[p.y][p.x].wall);
+            const pathMap = PathMap.generate(enemy.pos, this, p => !this.cells[p.y][p.x].wall, {
+                maxCost: seenAge,
+            });
             const isochrones = pathMap.isochrones(seenAge);
 
             let maxNumCells = 1;
@@ -76,7 +80,7 @@ export class Beliefs {
         }
 
         const elapsed = Date.now() - start;
-        console.error(`Updated pellet beliefs for ${numUpdates} cells in ${elapsed} ms`);
+        console.error(`Updated pellet beliefs for ${numUpdates} cells from ${numEnemies} enemies in ${elapsed} ms`);
     }
 }
 

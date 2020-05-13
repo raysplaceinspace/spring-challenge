@@ -6,6 +6,10 @@ const Debug = false;
 
 export type PassableCallback = (pos: Vec) => boolean;
 
+export interface PathLimits {
+    maxCost?: number;
+}
+
 export default class PathMap {
     public assignments = 0;
     public expansions = new Set<number>();
@@ -93,7 +97,7 @@ export default class PathMap {
         return best;
     }
 
-    public static generate(from: Vec, bounds: traverse.Dimensions, passable: PassableCallback): PathMap {
+    public static generate(from: Vec, bounds: traverse.Dimensions, passable: PassableCallback, limits?: PathLimits): PathMap {
         const pathMap = collections.create2D<number>(bounds.width, bounds.height, Infinity);
         const result = new PathMap(from, bounds, pathMap);
         
@@ -101,10 +105,13 @@ export default class PathMap {
             const initial = new Neighbour(from, 0);
             result.assign(initial);
 
+            const maxCost = limits?.maxCost ?? Infinity;
             let numIterations = 0;
             const neighbours = [initial];
             while (neighbours.length > 0) {
                 const neighbour = neighbours.shift();
+                if (neighbour.cost >= maxCost) { break; }
+
                 result.expand(neighbour, passable, neighbours);
 
                 ++numIterations;
