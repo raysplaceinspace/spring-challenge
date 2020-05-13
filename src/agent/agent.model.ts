@@ -5,14 +5,9 @@ export interface AgentParams {
     NearbyEnemiesTicks: number;
     MoveTimeoutMilliseconds: number;
     Penalty: number;
+    SearchRange: number;
     SpeedRange: number;
     SpeedTicks: number;
-}
-
-export interface Candidate {
-    pos: Vec;
-    value: number;
-    requiredForm?: string;
 }
 
 export function defaultParams(): AgentParams {
@@ -21,6 +16,7 @@ export function defaultParams(): AgentParams {
         NearbyEnemiesTicks: 10,
         MoveTimeoutMilliseconds: 40,
         Penalty: 1000,
+        SearchRange: 30,
         SpeedTicks: 10,
         SpeedRange: 5,
     };

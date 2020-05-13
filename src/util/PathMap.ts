@@ -28,6 +28,9 @@ export default class PathMap {
             path.unshift(current);
 
             const next = this.previousNeighbour(current);
+            if (!next) {
+                break;
+            }
             current = next;
         }
 
@@ -58,9 +61,9 @@ export default class PathMap {
         return result;
     }
 
-    private previousNeighbour(current: Vec) {
+    public previousNeighbour(current: Vec) {
         let best: Vec = null;
-        let bestCost: number = Infinity;
+        let bestCost: number = this.pathMap[current.y][current.x];
         for (const n of traverse.neighbours(current, this.bounds)) {
             const cost = this.pathMap[n.y][n.x];
             if (!best || cost < bestCost) {

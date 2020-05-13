@@ -5,11 +5,11 @@ import Vec from '../util/vector';
 
 export function testAgent() {
     const initialMap: string[] = [
-        "# #",
-        "# #",
-        "   ",
-        "# #",
-        "# #",
+        "# # # #",
+        "# # # #",
+        "       ",
+        "# # # #",
+        "# # # #",
     ];
     const initial: w.View = w.initialView(initialMap[0].length, initialMap.length, initialMap);
     const beliefs = new Beliefs(initial);
@@ -19,13 +19,13 @@ export function testAgent() {
     next.pacs.push({
         id: 0,
         team: w.Teams.Self,
-        pos: new Vec(2, 2),
+        pos: new Vec(2, 1),
         type: w.Forms.Rock,
         speedTurnsLeft: 1,
         abilityCooldown: 0,
     });
     next.pellets.push({
-        pos: new Vec(0, 2),
+        pos: new Vec(2, 3),
         value: 1,
     });
 
@@ -34,5 +34,9 @@ export function testAgent() {
 
     if (actions.length < 1) {
         throw "No action";
+    }
+
+    for (const action of actions) {
+        console.log(JSON.stringify(action));
     }
 }

@@ -6,6 +6,12 @@ import * as w from '../model';
 import PathMap from '../util/PathMap';
 import Vec from '../util/vector';
 
+interface Candidate {
+    target: Vec;
+    payoff: number;
+}
+
+
 export class Actor {
     private actions = new Map<string, w.Action>();
     private start = Date.now();
@@ -92,34 +98,31 @@ export class Actor {
         const beliefs = this.beliefs;
         const actions = this.actions;
 
-        const allOccupants = this.generateOccupants();
-        const allCandidates = collections.toArray(this.generateCandidates(beliefs));
-        const allPacsToControl = collections.toArray(this.pacsToControl(beliefs, actions));
+        const initialOccupants = this.generateOccupants();
+        const initialPacsToControl = collections.toArray(this.pacsToControl(beliefs, actions));
+        const initialValueMap = this.generateValueMap();
 
         let bestMoves: w.MoveAction[] = null;
         let bestPayoff = -Infinity;
 
         let iteration = 0;
         while (true) {
-            const occupants = collections.clone2D(allOccupants);
-            const candidates = new Set<a.Candidate>(allCandidates);
+            const occupants = collections.clone2D(initialOccupants);
+            const valueMap = collections.clone2D(initialValueMap);
 
             const moves = new Array<w.MoveAction>();
             let totalPayoff = 0;
 
-            const pacsToControl = collections.shuffle(allPacsToControl);
+            const pacsToControl = collections.shuffle(initialPacsToControl);
             for (const pac of pacsToControl) {
-                if (candidates.size <= 0) { break; }
-
                 const pathMap = PathMap.generate(
                     pac.pos,
                     beliefs,
                     (pos) => this.passable(occupants, pos, pac));
-                const closest = collections.maxBy(candidates, candidate => this.payoff(candidate, pac, pathMap));
-                const cost = pathMap.cost(closest.pos);
-                const payoff = this.payoff(closest, pac, pathMap);
-                if (closest && cost < Infinity) {
-                    const path = pathMap.pathTo(closest.pos);
+                const payoffMap = this.generatePayoffMap(pac, valueMap, pathMap);
+                const closest = collections.maxBy(this.generateCandidates(pac, payoffMap), candidate => candidate.payoff);
+                if (closest) {
+                    const path = pathMap.pathTo(closest.target);
 
                     // Choose target - multiple steps in a straight line
                     let target = path[0];
@@ -129,20 +132,25 @@ export class Actor {
                         const proceedingHeading = proceeding.clone().sub(pac.pos).unit();
                         if (targetHeading.equals(proceedingHeading)) {
                             target = proceeding;
+                        } else {
+                            break;
                         }
                     }
+
+                    // No other pac can go for the same pellets
+                    for (let i = 0; i < path.length; ++i) {
+                        const pos = path[i];
+                        valueMap[pos.y][pos.x] = 0;
+                    }
+
+                    // Stop other pacs from using this square so we don't end up blocking each other
+                    const next = path[0];
+                    occupants[next.y][next.x] = pac.key;
 
                     // Add move
                     const action: w.MoveAction = { pac: pac.id, type: "move", target };
                     moves.push(action);
-                    totalPayoff += payoff;
-
-                     // No other pac can go for the same pellet
-                    candidates.delete(closest);
-
-                     // Stop other pacs from using this square so we don't end up blocking each other
-                    const next = path[0];
-                    occupants[next.y][next.x] = pac.key;
+                    totalPayoff += closest.payoff;
                 }
             }
 
@@ -163,6 +171,35 @@ export class Actor {
         if (bestMoves) {
             for (const move of bestMoves) {
                 actions.set(b.Pac.key(w.Teams.Self, move.pac), move);
+            }
+        }
+    }
+
+    private generatePayoffMap(pac: b.Pac, valueMap: number[][], pathMap: PathMap): number[][] {
+        const payoffMap = collections.create2D(this.beliefs.width, this.beliefs.height, 0);
+
+        const isochrones = pathMap.isochrones(this.params.SearchRange);
+        for (let range = 0; range < isochrones.length; ++range) {
+            const isochrone = isochrones[range];
+            for (const current of isochrone) {
+                const previous = pathMap.previousNeighbour(current);
+                const previousPayoff = previous ? payoffMap[previous.y][previous.x] : 0;
+                const currentPayoff = this.discount(valueMap[current.y][current.x], range);
+                payoffMap[current.y][current.x] = currentPayoff + previousPayoff;
+            }
+        }
+
+        return payoffMap;
+    }
+
+    private* generateCandidates(pac: b.Pac, payoffMap: number[][]): Iterable<Candidate> {
+        for (const target of traverse.all(this.beliefs)) {
+            const payoff = payoffMap[target.y][target.x];
+            if (payoff > 0) {
+                yield {
+                    target,
+                    payoff,
+                };
             }
         }
     }
@@ -193,7 +230,7 @@ export class Actor {
         }
         for (const enemy of beliefs.pacs.values()) {
             if (enemy.team === w.Teams.Enemy && enemy.alive && enemy.seenTick === beliefs.tick) {
-                for (const n of traverse.untilRange(enemy.pos, this.maxMovementSpeed(enemy), this.beliefs)) {
+                for (const n of traverse.neighbours(enemy.pos, this.beliefs)) {
                     if (selfLocations.has(n.hash()) && !allOccupants[n.y][n.x]) {
                         // Detected the enemy could move to the same square as us
                         allOccupants[n.y][n.x] = enemy.key;
@@ -203,15 +240,6 @@ export class Actor {
         }
 
         return allOccupants;
-    }
-
-    private payoff(candidate: a.Candidate, pac: b.Pac, pathMap: PathMap) {
-        const cost = pathMap.cost(candidate.pos);
-        if (candidate.requiredForm && pac.form !== candidate.requiredForm) {
-            return -this.params.Penalty;
-        }
-
-        return this.discount(candidate.value, cost);
     }
 
     private discount(value: number, ticks: number) {
@@ -252,17 +280,11 @@ export class Actor {
         }
     }
 
-    private* generateCandidates(beliefs: b.Beliefs): Iterable<a.Candidate> {
+    private generateValueMap(): number[][] {
+        const beliefs = this.beliefs;
         const valueProbabilities = this.generateValueProbabilities();
-        for (const pos of traverse.all(beliefs)) {
-            const cell = beliefs.cells[pos.y][pos.x];
-            if (cell.value > 0) {
-                yield {
-                    value: cell.value * valueProbabilities[pos.y][pos.x],
-                    pos,
-                };
-            }
-        }
+        const valueMap = collections.init2D(beliefs.width, beliefs.height, (x, y) => beliefs.cells[y][x].value * valueProbabilities[y][x]);
+        return valueMap;
     }
 
     private generateValueProbabilities(): number[][] {
