@@ -10,20 +10,25 @@ export interface PathLimits {
     maxCost?: number;
 }
 
+interface Assignment {
+    cost: number;
+    from: Vec;
+}
+
 export default class PathMap {
     public assignments = 0;
 
-    private constructor(public from: Vec, public bounds: traverse.Dimensions, private pathMap: number[][]) {
+    private constructor(public from: Vec, public bounds: traverse.Dimensions, private pathMap: Assignment[][]) {
     }
 
     public cost(target: Vec) {
-        return this.pathMap[target.y][target.x];
+        return this.pathMap[target.y][target.x]?.cost ?? Infinity;
     }
 
     public pathTo(target: Vec): Vec[] {
         const path = new Array<Vec>();
 
-        if (this.pathMap[target.y][target.x] === Infinity) {
+        if (!this.pathMap[target.y][target.x]) {
             console.error(`Unable to find path to ${target.string()}`);
             return [target];
         }
@@ -56,8 +61,8 @@ export default class PathMap {
     public isochrone(targetCost: number): Vec[] {
         const isochrone = new Array<Vec>();
         for (const pos of traverse.all(this.bounds)) {
-            const cost = this.pathMap[pos.y][pos.x];
-            if (cost == targetCost) {
+            const assignment = this.pathMap[pos.y][pos.x];
+            if (assignment && assignment.cost == targetCost) {
                 isochrone.push(pos);
             }
         }
@@ -68,9 +73,9 @@ export default class PathMap {
         const result = new Array<Vec[]>();
 
         for (const pos of traverse.all(this.bounds)) {
-            const cost = this.pathMap[pos.y][pos.x];
-            if (cost <= maxCost) {
-                const key = Math.floor(cost);
+            const assignment = this.pathMap[pos.y][pos.x];
+            if (assignment && assignment.cost <= maxCost) {
+                const key = Math.floor(assignment.cost);
                 let isochrone = result[key];
                 if (!isochrone) {
                     result[key] = isochrone = [];
@@ -84,25 +89,17 @@ export default class PathMap {
     }
 
     public previousNeighbour(current: Vec) {
-        let best: Vec = null;
-        let bestCost: number = this.pathMap[current.y][current.x];
-        for (const n of traverse.neighbours(current, this.bounds)) {
-            const cost = this.pathMap[n.y][n.x];
-            if (!best || cost < bestCost) {
-                best = n;
-                bestCost = cost;
-            }
-        }
-        return best;
+        const assignment = this.pathMap[current.y][current.x];
+        return assignment?.from;
     }
 
     public static generate(from: Vec, bounds: traverse.Dimensions, passable: PassableCallback, limits?: PathLimits): PathMap {
-        const pathMap = collections.create2D<number>(bounds.width, bounds.height, Infinity);
+        const pathMap = collections.create2D<Assignment>(bounds.width, bounds.height, null);
         const result = new PathMap(from, bounds, pathMap);
         
         if (traverse.withinBounds(from, bounds)) {
             const initial = new Neighbour(from, 0);
-            result.assign(initial);
+            result.assign(initial, null);
 
             const maxCost = limits?.maxCost ?? Infinity;
             let numIterations = 0;
@@ -125,22 +122,22 @@ export default class PathMap {
         return result;
     }
 
-    private assign(neighbour: Neighbour) {
+    private assign(neighbour: Neighbour, from: Vec) {
         const pos = neighbour.pos;
         const cost = neighbour.cost;
 
         const previous = this.pathMap[pos.y][pos.x];
-        if (cost < previous) {
-            this.pathMap[pos.y][pos.x] = cost;
+        if (!previous || cost < previous.cost) {
+            this.pathMap[pos.y][pos.x] = { cost, from };
             ++this.assignments;
         }
     }
 
     private expand(from: Neighbour, passable: PassableCallback, neighbours: Neighbour[]) {
         const pos = from.pos;
-        const cost = this.pathMap[pos.y][pos.x];
+        const cost = from.cost;
 
-        if (cost < from.cost) {
+        if (this.cost(pos) < cost) {
             // This neighbour has been superceded now
             return;
         }
@@ -151,9 +148,9 @@ export default class PathMap {
             }
 
             let next = cost + 1;
-            if (next < this.pathMap[n.y][n.x]) {
+            if (next < this.cost(n)) {
                 const neighbour = new Neighbour(n, next);
-                this.assign(neighbour);
+                this.assign(neighbour, from.pos);
                 this.insertNeighbour(neighbour, neighbours);
             }
         }
