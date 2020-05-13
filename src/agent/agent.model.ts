@@ -16,7 +16,7 @@ export function defaultParams(): AgentParams {
         NearbyEnemiesTicks: 10,
         MoveTimeoutMilliseconds: 40,
         Penalty: 1000,
-        SearchRange: 30,
+        SearchRange: 46,
         SpeedTicks: 10,
         SpeedRange: 5,
     };
