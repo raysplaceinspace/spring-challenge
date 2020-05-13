@@ -19,9 +19,6 @@ export class CollectActor {
     private initialOccupants: OccupantMap;
     private initialValueMap: ValueMap;
 
-    private pathfindingElapsed = 0;
-    private payoffMappingElapsed = 0;
-
     constructor(
         public view: w.View,
         public beliefs: b.Beliefs,
@@ -49,9 +46,8 @@ export class CollectActor {
 
             const timePerIteration = (Date.now() - collectStart) / numIterations;
             const elapsed = Date.now() - this.start;
-            if (elapsed >= this.params.MoveTimeoutMilliseconds + timePerIteration // Don't timeout
+            if (elapsed + timePerIteration >= this.params.MoveTimeoutMilliseconds // Don't timeout
                 || pacsToControl.length <= 1) { // If just 1 pac, we've already tried all possible combinations
-                console.error(`Chose moves for ${pacsToControl.length} pacs after ${numIterations} iterations (${elapsed} ms, pathfinding=${this.pathfindingElapsed} ms, payoffMapping=${this.payoffMappingElapsed} ms)`);
                 break;
             }
         }
@@ -61,6 +57,9 @@ export class CollectActor {
                 actions.set(b.Pac.key(w.Teams.Self, move.pac), move);
             }
         }
+
+        const elapsed = Date.now() - this.start;
+        console.error(`Chose moves for ${pacsToControl.length} pacs after ${numIterations} iterations (${elapsed} ms)`);
     }
 
     private chooseOne(pacsToControl: b.Pac[]): CollectCandidate {
@@ -72,13 +71,8 @@ export class CollectActor {
         let totalPayoff = 0;
 
         for (const pac of collections.shuffle(pacsToControl)) { // Try a random order of pacs each time
-            const pathfindingStart = Date.now();
             const pathMap = occupants.pathfind(pac);
-            this.pathfindingElapsed += Date.now() - pathfindingStart;
-
-            const payoffMappingStart = Date.now();
             const payoffMap = PayoffMap.generate(pac, this.beliefs, valueMap, pathMap, this.params);
-            this.payoffMappingElapsed += Date.now() - payoffMappingStart;
 
             const best = collections.maxBy(payoffMap.candidates(), candidate => candidate.payoff);
             if (best) {
