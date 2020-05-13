@@ -116,7 +116,7 @@ export default class PathMap {
 
                 ++numIterations;
                 if (Debug && numIterations % 100 === 0) {
-                    console.error(`Pathmapping ${numIterations}...`);
+                    console.error(`Pathmapping ${numIterations}, neighbours=${neighbours.length}...`);
                 }
             }
         } else {
@@ -149,7 +149,7 @@ export default class PathMap {
         }
 
         for (const n of traverse.neighbours(pos, this.bounds)) {
-            if (n.equals(pos) || !passable(n)) {
+            if (!passable(n)) {
                 continue;
             }
 
@@ -163,15 +163,39 @@ export default class PathMap {
     }
 
     private insertNeighbour(toInsert: Neighbour, neighbours: Neighbour[]) {
-        let i = 0;
-        while (i < neighbours.length && neighbours[i].cost < toInsert.cost) {
-            ++i;
-        }
-
+        let i = this.findInsertionPosition(toInsert, neighbours);
         if (i < neighbours.length) {
             neighbours.splice(i, 0, toInsert);
         } else {
             neighbours.push(toInsert);
+        }
+    }
+
+    private findInsertionPosition(toInsert: Neighbour, neighbours: Neighbour[]) {
+        if (neighbours.length === 0) {
+            return 0;
+        } else if (toInsert.cost <= neighbours[0].cost) {
+            return 0;
+        } else if (toInsert.cost >= neighbours[neighbours.length - 1].cost) {
+            return neighbours.length;
+        } else {
+            return this.binarySearchInsertionPosition(toInsert, neighbours, 0, neighbours.length - 1);
+        }
+    }
+
+    private binarySearchInsertionPosition(toInsert: Neighbour, neighbours: Neighbour[], lower: number, upper: number): number {
+        if (upper >= lower) {
+            return lower;
+        }
+
+        const mid = Math.floor((lower + upper) / 2);
+        const midCost = neighbours[mid].cost;
+        if (toInsert.cost === midCost) {
+            return mid;
+        } else if (toInsert.cost < midCost) {
+            return this.binarySearchInsertionPosition(toInsert, neighbours, lower, mid);
+        } else {
+            return this.binarySearchInsertionPosition(toInsert, neighbours, mid + 1, upper);
         }
     }
 }
