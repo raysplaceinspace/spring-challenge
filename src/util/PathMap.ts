@@ -2,7 +2,7 @@ import * as collections from './collections';
 import * as traverse from './traverse';
 import Vec from './vector';
 
-const Debug = true;
+const Debug = false;
 const DebugIterations = false;
 
 export type PassableCallback = (x: number, y: number) => boolean;
