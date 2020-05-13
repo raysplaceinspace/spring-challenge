@@ -158,10 +158,7 @@ export default class PathMap {
 
         // If a cell has been made impassable, clear everything that went through that cell
         if (cellsMadeNotPassable.length > 0) {
-            const forwardMap = clone.forward();
-            for (const cell of cellsMadeNotPassable) {
-                clone.clearBeyond(cell, forwardMap);
-            }
+            clone.clearBeyondAll(cellsMadeNotPassable);
         }
 
         // Recalculate, if something has changed
@@ -183,6 +180,13 @@ export default class PathMap {
         }
 
         return clone;
+    }
+
+    private clearBeyondAll(cells: Iterable<Vec>) {
+        const forwardMap = this.forward();
+        for (const cell of cells) {
+            this.clearBeyond(cell, forwardMap);
+        }
     }
 
     private clearBeyond(pos: Vec, forwardMap: Array<Vec>[][]) {
