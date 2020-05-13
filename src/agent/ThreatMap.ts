@@ -17,25 +17,22 @@ export class ThreatMap {
     }
 
     public static generate(beliefs: b.Beliefs, params: a.AgentParams): ThreatMap {
-        const occupied: boolean[][] = collections.init2D(beliefs.width, beliefs.height, (x, y) => beliefs.cells[y][x].wall);
-        for (const pac of beliefs.pacs.values()) {
-            if (pac.team === w.Teams.Self && pac.seenTick === beliefs.tick) {
-                occupied[pac.pos.y][pac.pos.x] = true;
-            }
-        }
-
         const enemyPathMaps = new Map<b.Pac, PathMap>();
         for (const enemy of beliefs.pacs.values()) {
             if (enemy.team === w.Teams.Enemy && enemy.alive && (beliefs.tick - enemy.seenTick) < params.NearbyEnemiesTicks) {
                 const pathMap = PathMap.generate(
                     enemy.pos,
                     beliefs,
-                    p => !occupied[p.y][p.x]);
+                    p => true);
                 enemyPathMaps.set(enemy, pathMap);
             }
         }
 
         return new ThreatMap(beliefs, enemyPathMaps);
+    }
+
+    public get size() {
+        return this.enemyPathMaps.size;
     }
 
     public threats(pac: b.Pac): Threat[] {

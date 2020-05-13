@@ -19,6 +19,9 @@ export class CollectActor {
     private initialOccupants: OccupantMap;
     private initialValueMap: ValueMap;
 
+    private pathfindingElapsed = 0;
+    private payoffMappingElapsed = 0;
+
     constructor(
         public view: w.View,
         public beliefs: b.Beliefs,
@@ -33,21 +36,25 @@ export class CollectActor {
         const pacsToControl = collections.toArray(AgentHelper.pacsToControl(this.beliefs, actions))
 
         let best: CollectCandidate = null;
-        let iteration = 0;
+        let numIterations = 0;
+
+        const collectStart = Date.now();
         while (true) {
             const candidate = this.chooseOne(pacsToControl);
             if (!best || candidate.payoff > best.payoff) {
                 best = candidate;
             }
 
-            ++iteration;
+            ++numIterations;
 
+            const timePerIteration = (Date.now() - collectStart) / numIterations;
             const elapsed = Date.now() - this.start;
-            if (elapsed >= this.params.MoveTimeoutMilliseconds) {
+            if (elapsed >= this.params.MoveTimeoutMilliseconds + timePerIteration // Don't timeout
+                || pacsToControl.length <= 1) { // If just 1 pac, we've already tried all possible combinations
+                console.error(`Chose moves for ${pacsToControl.length} pacs after ${numIterations} iterations (${elapsed} ms, pathfinding=${this.pathfindingElapsed} ms, payoffMapping=${this.payoffMappingElapsed} ms)`);
                 break;
             }
         }
-        console.error(`Chose moves after ${iteration} iterations`);
 
         if (best) {
             for (const move of best.moves) {
@@ -65,8 +72,14 @@ export class CollectActor {
         let totalPayoff = 0;
 
         for (const pac of collections.shuffle(pacsToControl)) { // Try a random order of pacs each time
+            const pathfindingStart = Date.now();
             const pathMap = occupants.pathfind(pac);
+            this.pathfindingElapsed += Date.now() - pathfindingStart;
+
+            const payoffMappingStart = Date.now();
             const payoffMap = PayoffMap.generate(pac, this.beliefs, valueMap, pathMap, this.params);
+            this.payoffMappingElapsed += Date.now() - payoffMappingStart;
+
             const best = collections.maxBy(payoffMap.candidates(), candidate => candidate.payoff);
             if (best) {
                 const path = pathMap.pathTo(best.target);

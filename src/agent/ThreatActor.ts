@@ -12,7 +12,8 @@ export class ThreatActor {
     constructor(
         public view: w.View,
         public beliefs: b.Beliefs,
-        public params: a.AgentParams) {
+        public params: a.AgentParams,
+        public start = Date.now()) {
     }
 
     public choose(actions: Map<string, w.Action>) {
@@ -23,29 +24,37 @@ export class ThreatActor {
                 actions.set(pac.key, action);
             }
         }
+
+        const elapsed = Date.now() - this.start;
+        console.error(`Evaluated ${threatMap.size} threats in ${elapsed} ms, actions=${actions.size}`);
     }
 
     private chooseOne(pac: b.Pac, threatMap: ThreatMap): w.Action {
         if (pac.abilityCooldownUntilTick > this.beliefs.tick) { return null; } // Only consider pacs who can cast an ability
 
         const threats = threatMap.threats(pac);
-
         const closest = collections.minBy(threats, threat => threat.arrivalTicks);
+        if (threats) {
+            console.error(`${pac.key}: ${threats.length} threats, closest=${closest ? closest.arrivalTicks : 'null'}`);
+        }
+
         if (closest && closest.arrivalTicks <= 0) {
             // Be prepared to fight the enemy that could arrive
             const dominantForm = AgentHelper.dominate(closest.enemy.form);
             if (dominantForm !== pac.form) {
-                const action: w.SwitchAction = { pac: pac.id, type: "switch", form: dominantForm };
-                return action;
+                return {
+                    pac: pac.id,
+                    type: "switch",
+                    form: dominantForm,
+                };
             }
         }
 
-        if (!closest || closest.arrivalTicks >= this.params.SafeTicks) {
-            const action: w.SpeedAction = { pac: pac.id, type: "speed" };
-            return action;
-        }
-
-        return null;
+        // Enemy cannot reach us, even at maximum speed
+        return {
+            pac: pac.id,
+            type: "speed",
+        };
     }
 }
 

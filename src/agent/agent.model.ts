@@ -4,10 +4,7 @@ export interface AgentParams {
     DiscountRate: number;
     NearbyEnemiesTicks: number;
     MoveTimeoutMilliseconds: number;
-    Penalty: number;
     SearchRange: number;
-    SpeedRange: number;
-    SafeTicks: number;
 }
 
 export interface TargetCandidate {
@@ -20,9 +17,6 @@ export function defaultParams(): AgentParams {
         DiscountRate: 1.2,
         NearbyEnemiesTicks: 10,
         MoveTimeoutMilliseconds: 40,
-        Penalty: 1000,
         SearchRange: 46,
-        SafeTicks: 10,
-        SpeedRange: 5,
     };
 }
