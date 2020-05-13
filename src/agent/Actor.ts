@@ -48,7 +48,7 @@ export class Actor {
         for (const pac of this.pacsToControl(beliefs, actions)) {
             if (pac.abilityCooldownUntilTick < beliefs.tick) {
                 const pathMap = PathMap.generate(pac.pos, beliefs, p => !allOccupants[p.y][p.x]);
-                const threats = recentEnemies.filter(enemy => pathMap.cost(enemy.pos) - this.maxRange(enemy) - this.maxRange(pac) <= 0);
+                const threats = recentEnemies.filter(enemy => pathMap.cost(enemy.pos) - this.maxRange(enemy) <= 0);
 
                 const closestEnemy = collections.minBy(threats, enemy => pathMap.cost(enemy.pos));
                 if (closestEnemy) {
