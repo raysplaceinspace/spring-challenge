@@ -23,7 +23,7 @@ export class ThreatMap {
                 const pathMap = PathMap.generate(
                     enemy.pos,
                     beliefs,
-                    p => true);
+                    (x, y) => !beliefs.cells[y][x].wall);
                 enemyPathMaps.set(enemy, pathMap);
             }
         }

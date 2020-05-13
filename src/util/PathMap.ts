@@ -4,7 +4,7 @@ import Vec from './vector';
 
 const Debug = false;
 
-export type PassableCallback = (pos: Vec) => boolean;
+export type PassableCallback = (x: number, y: number) => boolean;
 
 export interface PathLimits {
     maxCost?: number;
@@ -14,7 +14,7 @@ export default class PathMap {
     public assignments = 0;
     private pathMap: Cell[][];
 
-    private constructor(public from: Vec, public bounds: traverse.Dimensions) {
+    private constructor(public from: Vec, public bounds: traverse.Dimensions, private passable: boolean[][]) {
         this.pathMap = collections.create2D<Cell>(bounds.width, bounds.height, null);
     }
 
@@ -91,17 +91,18 @@ export default class PathMap {
     }
 
     public static generate(from: Vec, bounds: traverse.Dimensions, passable: PassableCallback, limits?: PathLimits): PathMap {
-        const pathMap = new PathMap(from, bounds);
+        const passableMap = collections.init2D(bounds.width, bounds.height, (x, y) => passable(x, y));
+        const pathMap = new PathMap(from, bounds, passableMap);
         
         if (traverse.withinBounds(from, bounds)) {
             const initial = new Cell(from, null, 0);
-            pathMap.expandAll([initial], passable, limits);
+            pathMap.expandAll([initial], limits);
         }
 
         return pathMap;
     }
 
-    private expandAll(initial: Cell[], passable: PassableCallback, limits?: PathLimits) {
+    private expandAll(initial: Cell[], limits?: PathLimits) {
         for (const cell of initial) {
             this.assign(cell);
         }
@@ -113,7 +114,7 @@ export default class PathMap {
             const neighbour = neighbours.shift();
             if (neighbour.cost >= maxCost) { break; }
 
-            this.expand(neighbour, passable, neighbours);
+            this.expand(neighbour, neighbours);
 
             ++numIterations;
             if (Debug && numIterations % 100 === 0) {
@@ -133,7 +134,7 @@ export default class PathMap {
         }
     }
 
-    private expand(from: Cell, passable: PassableCallback, neighbours: Cell[]) {
+    private expand(from: Cell, neighbours: Cell[]) {
         const pos = from.pos;
         const cost = from.cost;
 
@@ -143,7 +144,7 @@ export default class PathMap {
         }
 
         for (const n of traverse.neighbours(pos, this.bounds)) {
-            if (!passable(n)) {
+            if (!this.passable[n.y][n.x]) {
                 continue;
             }
 

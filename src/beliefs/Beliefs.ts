@@ -44,7 +44,7 @@ export class Beliefs {
             ++numEnemies;
 
             const seenAge = this.tick - enemy.seenTick;
-            const pathMap = PathMap.generate(enemy.pos, this, p => !this.cells[p.y][p.x].wall, {
+            const pathMap = PathMap.generate(enemy.pos, this, (x, y) => !this.cells[y][x].wall, {
                 maxCost: seenAge,
             });
             const isochrones = pathMap.isochrones(seenAge);

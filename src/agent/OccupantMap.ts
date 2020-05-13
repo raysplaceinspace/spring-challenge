@@ -78,15 +78,15 @@ export class OccupantMap {
         return PathMap.generate(
             pac.pos,
             this.beliefs,
-            (pos) => this.passable(pos, pac));
+            (x, y) => this.passable(x, y, pac));
     }
 
     block(pos: Vec, pac: b.Pac) {
         this.occupants[pos.y][pos.x] = OccupantMap.pacOccupant(pac, this.beliefs);
     }
 
-    private passable(pos: Vec, pac: b.Pac): boolean {
-        const occupant = this.occupants[pos.y][pos.x];
+    private passable(x: number, y: number, pac: b.Pac): boolean {
+        const occupant = this.occupants[y][x];
         if (!occupant) {
             return true;
         }
