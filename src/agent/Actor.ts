@@ -12,12 +12,11 @@ import WaitActor from './WaitActor';
 
 
 export class Actor {
-    private start = Date.now();
-
     constructor(
         public view: w.View,
         public beliefs: b.Beliefs,
-        public params: a.AgentParams) {
+        public params: a.AgentParams,
+        private start = Date.now()) {
     }
 
     choose(): w.Action[] {

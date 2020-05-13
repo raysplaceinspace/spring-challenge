@@ -2,6 +2,8 @@ import * as collections from './collections';
 import * as traverse from './traverse';
 import Vec from './vector';
 
+const Debug = false;
+
 export type PassableCallback = (pos: Vec) => boolean;
 
 export default class PathMap {
@@ -24,6 +26,7 @@ export default class PathMap {
         }
 
         let current = target;
+        let numIterations = 0;
         while (!current.equals(this.from)) {
             path.unshift(current);
 
@@ -32,6 +35,11 @@ export default class PathMap {
                 break;
             }
             current = next;
+
+            ++numIterations;
+            if (Debug && numIterations % 100 === 0) {
+                console.error(`Pathfinding ${numIterations}...`);
+            }
         }
 
         if (path.length === 0) {
@@ -93,10 +101,16 @@ export default class PathMap {
             const initial = new Neighbour(from, 0);
             result.assign(initial);
 
+            let numIterations = 0;
             const neighbours = [initial];
             while (neighbours.length > 0) {
                 const neighbour = neighbours.shift();
                 result.expand(neighbour, passable, neighbours);
+
+                ++numIterations;
+                if (Debug && numIterations % 100 === 0) {
+                    console.error(`Pathmapping ${numIterations}...`);
+                }
             }
         } else {
             // Probably a dead robot

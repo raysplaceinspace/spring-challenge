@@ -91,8 +91,9 @@ function main() {
             next.tick = tick;
             readNext(next);
 
-            beliefs.update(next);
-            const actions = agent.choose(next, beliefs);
+            const start = Date.now();
+            beliefs.update(next, start);
+            const actions = agent.choose(next, beliefs, start);
             console.log(actions.map(formatAction).join(' | '));
 
             tick++;

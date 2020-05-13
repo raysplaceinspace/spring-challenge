@@ -26,15 +26,15 @@ export class Beliefs {
         this.teams = Team.initializeTeams(view);
     }
 
-    update(view: w.View) {
+    update(view: w.View, start = Date.now()) {
         this.tick = view.tick;
         Team.update(view, this.teams);
         Pac.update(view, this.pacs);
         Cell.update(view, this.cells);
-        this.updateStillAvailableProbabilities();
+        this.updateStillAvailableProbabilities(start);
     }
 
-    private updateStillAvailableProbabilities() {
+    private updateStillAvailableProbabilities(start = Date.now()) {
         let numUpdates = 0;
         for (const enemy of this.pacs.values()) {
             if (!(enemy.alive && enemy.team === w.Teams.Enemy)) {
@@ -75,9 +75,8 @@ export class Beliefs {
             }
         }
 
-        if (numUpdates > 0) {
-            console.error(`Updated stillAvailableProbability for ${numUpdates} cells`);
-        }
+        const elapsed = Date.now() - start;
+        console.error(`Updated pellet beliefs for ${numUpdates} cells in ${elapsed} ms`);
     }
 }
 

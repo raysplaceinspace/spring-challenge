@@ -11,8 +11,8 @@ export class Agent {
     constructor(view: w.View, public params: a.AgentParams = a.defaultParams()) {
     }
 
-    choose(view: w.View, beliefs: b.Beliefs): w.Action[] {
-        const actor = new Actor(view, beliefs, this.params);
+    choose(view: w.View, beliefs: b.Beliefs, start = Date.now()): w.Action[] {
+        const actor = new Actor(view, beliefs, this.params, start);
         return actor.choose();
     }
 }
