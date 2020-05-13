@@ -7,7 +7,7 @@ export interface AgentParams {
     Penalty: number;
     SearchRange: number;
     SpeedRange: number;
-    SpeedTicks: number;
+    SafeTicks: number;
 }
 
 export interface TargetCandidate {
@@ -22,7 +22,7 @@ export function defaultParams(): AgentParams {
         MoveTimeoutMilliseconds: 40,
         Penalty: 1000,
         SearchRange: 46,
-        SpeedTicks: 10,
+        SafeTicks: 10,
         SpeedRange: 5,
     };
 }
