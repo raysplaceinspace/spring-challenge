@@ -6,6 +6,7 @@ import * as w from '../model';
 import * as AgentHelper from './AgentHelper';
 import PathMap from '../util/PathMap';
 import Vec from '../util/vector';
+import OccupantMap from './OccupantMap';
 
 export interface Threat {
     enemy: b.Pac;
@@ -13,37 +14,33 @@ export interface Threat {
 }
 
 export class ThreatMap {
-    private constructor(private beliefs: b.Beliefs, private enemyPathMaps: Map<b.Pac, PathMap>) {
+    private constructor(private beliefs: b.Beliefs, private enemies: b.Pac[], private occupantMap: OccupantMap) {
     }
 
-    public static generate(beliefs: b.Beliefs, params: a.AgentParams): ThreatMap {
-        const enemyPathMaps = new Map<b.Pac, PathMap>();
+    public static generate(beliefs: b.Beliefs, occupantMap: OccupantMap, params: a.AgentParams): ThreatMap {
+        const enemies = new Array<b.Pac>();
         for (const enemy of beliefs.pacs.values()) {
             if (enemy.team === w.Teams.Enemy && enemy.alive && (beliefs.tick - enemy.seenTick) < params.NearbyEnemiesTicks) {
-                const pathMap = PathMap.generate(
-                    enemy.pos,
-                    beliefs,
-                    (x, y) => !beliefs.cells[y][x].wall);
-                enemyPathMaps.set(enemy, pathMap);
+                enemies.push(enemy);
             }
         }
 
-        return new ThreatMap(beliefs, enemyPathMaps);
+        return new ThreatMap(beliefs, enemies, occupantMap);
     }
 
     public get size() {
-        return this.enemyPathMaps.size;
+        return this.enemies.length;
     }
 
     public threats(pac: b.Pac): Threat[] {
         const threats = new Array<Threat>();
 
-        for (const enemy of this.enemyPathMaps.keys()) {
-            const pathMap = this.enemyPathMaps.get(enemy);
+        const pathMap = this.occupantMap.pathfind(pac);
+        for (const enemy of this.enemies) {
             const maxRange = (1 + this.beliefs.tick - pac.seenTick) * AgentHelper.maxMovementSpeed(enemy, this.beliefs);
 
             // How far away was the enemy last time we saw them, and how far could they have travelled in the time since we last saw them
-            const arrivalTicks = Math.max(0, pathMap.cost(pac.pos) - maxRange); 
+            const arrivalTicks = Math.max(0, pathMap.cost(enemy.pos) - maxRange); 
             threats.push({ enemy, arrivalTicks });
         }
 

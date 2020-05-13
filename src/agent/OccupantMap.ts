@@ -107,17 +107,13 @@ export class OccupantMap {
         const occupant = this.occupants[y][x];
         if (!occupant) {
             return true;
-        }
-
-        if (occupant.pac === pac.key) {
+        } else if (occupant.pac === pac.key) {
             return true;
-        }
-
-        if (occupant.dominateWith === pac.form) {
+        } else if (occupant.dominateWith === pac.form) {
             return true;
+        } else {
+            return false;
         }
-
-        return false;
     }
 }
 

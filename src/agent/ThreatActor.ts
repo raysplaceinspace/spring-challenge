@@ -4,7 +4,7 @@ import * as a from './agent.model';
 import * as b from '../beliefs';
 import * as w from '../model';
 import * as AgentHelper from './AgentHelper';
-import PathMap from '../util/PathMap';
+import OccupantMap from './OccupantMap';
 import { Threat, ThreatMap } from './ThreatMap';
 import Vec from '../util/vector';
 
@@ -12,12 +12,13 @@ export class ThreatActor {
     constructor(
         public view: w.View,
         public beliefs: b.Beliefs,
+        public occupantMap: OccupantMap,
         public params: a.AgentParams,
         public start = Date.now()) {
     }
 
     public choose(actions: Map<string, w.Action>) {
-        const threatMap = ThreatMap.generate(this.beliefs, this.params);
+        const threatMap = ThreatMap.generate(this.beliefs, this.occupantMap, this.params);
         for (const pac of AgentHelper.pacsToControl(this.beliefs, actions)) {
             const action = this.chooseOne(pac, threatMap);
             if (action) {

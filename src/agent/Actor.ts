@@ -7,6 +7,7 @@ import * as AgentHelper from './AgentHelper';
 import PathMap from '../util/PathMap';
 import Vec from '../util/vector';
 import CollectActor from './CollectActor';
+import OccupantMap from './OccupantMap';
 import ThreatActor from './ThreatActor';
 import WaitActor from './WaitActor';
 
@@ -22,10 +23,13 @@ export class Actor {
     choose(): w.Action[] {
         const actions = new Map<string, w.Action>();
 
-        const threatActor = new ThreatActor(this.view, this.beliefs, this.params);
+        const occupantMap = OccupantMap.generate(this.beliefs);
+        occupantMap.precompute(collections.filter(this.beliefs.pacs.values(), p => p.team === w.Teams.Self && p.alive)); // Precompute the paths for all my pacs
+
+        const threatActor = new ThreatActor(this.view, this.beliefs, occupantMap, this.params);
         threatActor.choose(actions);
 
-        const collectActor = new CollectActor(this.view, this.beliefs, this.params, this.start);
+        const collectActor = new CollectActor(this.view, this.beliefs, occupantMap, this.params, this.start);
         collectActor.choose(actions);
 
         const waitActor = new WaitActor(this.view, this.beliefs, this.params);

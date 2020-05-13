@@ -17,22 +17,20 @@ interface CollectCandidate {
 }
 
 export class CollectActor {
-    private initialOccupants: OccupantMap;
     private initialValueMap: ValueMap;
 
     constructor(
         public view: w.View,
         public beliefs: b.Beliefs,
+        public initialOccupants: OccupantMap,
         public params: a.AgentParams,
         public start = Date.now()) {
 
-        this.initialOccupants = OccupantMap.generate(beliefs);
         this.initialValueMap = ValueMap.generate(beliefs);
     }
 
     choose(actions: Map<string, w.Action>) {
         const pacsToControl = collections.toArray(AgentHelper.pacsToControl(this.beliefs, actions))
-        this.initialOccupants.precompute(pacsToControl);
 
         let best: CollectCandidate = null;
         let numIterations = 0;
