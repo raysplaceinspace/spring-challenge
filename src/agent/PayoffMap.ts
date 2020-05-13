@@ -11,32 +11,48 @@ import Vec from '../util/vector';
 const Debug = false;
 
 export class PayoffMap {
-    private constructor(private beliefs: b.Beliefs, private payoffs: number[][]) {
+    private payoffs: number[][];
+
+    private constructor(private beliefs: b.Beliefs, private valueMap: ValueMap, private pathMap: PathMap, private params: a.AgentParams) {
+        this.payoffs = collections.create2D(beliefs.width, beliefs.height, 0);
     }
 
     public static generate(pac: b.Pac, beliefs: b.Beliefs, valueMap: ValueMap, pathMap: PathMap, params: a.AgentParams): PayoffMap {
-        const payoffMap = collections.create2D(beliefs.width, beliefs.height, 0);
+        const payoffMap = new PayoffMap(beliefs, valueMap, pathMap, params);
+        payoffMap.propogateFrom(pac.pos);
+        return payoffMap;
+    }
 
-        const isochrones = pathMap.isochrones(params.SearchRange);
-        for (let range = 0; range < isochrones.length; ++range) {
-            const isochrone = isochrones[range];
-            for (const current of isochrone) {
-                const previous = pathMap.previousNeighbour(current);
-                const previousPayoff = previous ? payoffMap[previous.y][previous.x] : 0;
-                const currentPayoff = AgentHelper.discount(valueMap.value(current), range, params);
-                payoffMap[current.y][current.x] = currentPayoff + previousPayoff;
-            }
-        }
+    private propogateFrom(from: Vec) {
+        const start = Date.now();
+
+        const forwardMap = this.pathMap.forward();
+        const numUpdates = this.propogate(from, forwardMap, 0, 0);
 
         if (Debug) {
-            console.error(`Generated payoff map from ${isochrones.filter(x => !!x).length} isochrones`);
+            const elapsed = Date.now() - start;
+            console.error(`Propogated ${numUpdates} payoffs in ${elapsed} ms`);
         }
+    }
 
-        return new PayoffMap(beliefs, payoffMap);
+    private propogate(current: Vec, forwardMap: Array<Vec>[][], distance: number, accumulatedPayoff: number) {
+        let numUpdates = 1; // 1 because we're updating this cell
+
+        const currentPayoff = AgentHelper.discount(this.valueMap.value(current), distance, this.params);
+        accumulatedPayoff += currentPayoff;
+
+        this.payoffs[current.y][current.x] = accumulatedPayoff;
+
+        for (const next of forwardMap[current.y][current.x]) {
+            numUpdates += this.propogate(next, forwardMap, distance + 1, accumulatedPayoff);
+        }
+        return numUpdates;
     }
 
     clone() {
-        return new PayoffMap(this.beliefs, collections.clone2D(this.payoffs));
+        const payoffMap = new PayoffMap(this.beliefs, this.valueMap, this.pathMap, this.params);
+        payoffMap.payoffs = collections.clone2D(payoffMap.payoffs);
+        return payoffMap;
     }
 
     payoff(pos: Vec) {
