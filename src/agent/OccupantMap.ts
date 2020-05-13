@@ -4,7 +4,7 @@ import * as a from './agent.model';
 import * as b from '../beliefs';
 import * as w from '../model';
 import * as AgentHelper from './AgentHelper';
-import PathMap from '../util/PathMap';
+import PathMap, { PassableCallback } from '../util/PathMap';
 import Vec from '../util/vector';
 
 interface Occupant {
@@ -14,6 +14,8 @@ interface Occupant {
 }
 
 export class OccupantMap {
+    private pathMapCache = new Map<b.Pac, PathMap>();
+
     private constructor(private beliefs: b.Beliefs, private occupants: Occupant[][]) {
     }
 
@@ -71,14 +73,30 @@ export class OccupantMap {
     }
 
     clone() {
-        return new OccupantMap(this.beliefs, collections.clone2D(this.occupants));
+        const clone = new OccupantMap(this.beliefs, collections.clone2D(this.occupants));
+        clone.pathMapCache = new Map(this.pathMapCache);
+        return clone;
+    }
+
+    precompute(pacs: Iterable<b.Pac>) {
+        // Precompute the pathMap for each pac so that all future pathfindings can be incremental
+        for (const pac of pacs) {
+            this.pathfind(pac);
+        }
     }
 
     pathfind(pac: b.Pac) {
-        return PathMap.generate(
-            pac.pos,
-            this.beliefs,
-            (x, y) => this.passable(x, y, pac));
+        const passable: PassableCallback = (x, y) => this.passable(x, y, pac);
+        const initial = this.pathMapCache.get(pac);
+
+        let pathMap: PathMap;
+        if (initial) {
+            pathMap = initial.reevaluate(passable);
+        } else {
+            pathMap = PathMap.generate(pac.pos, this.beliefs, passable);
+        }
+        this.pathMapCache.set(pac, pathMap);
+        return pathMap;
     }
 
     block(pos: Vec, pac: b.Pac) {

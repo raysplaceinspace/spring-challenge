@@ -32,6 +32,7 @@ export class CollectActor {
 
     choose(actions: Map<string, w.Action>) {
         const pacsToControl = collections.toArray(AgentHelper.pacsToControl(this.beliefs, actions))
+        this.initialOccupants.precompute(pacsToControl);
 
         let best: CollectCandidate = null;
         let numIterations = 0;

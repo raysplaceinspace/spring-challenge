@@ -3,6 +3,7 @@ import * as traverse from './traverse';
 import Vec from './vector';
 
 const Debug = false;
+const DebugIterations = false;
 
 export type PassableCallback = (x: number, y: number) => boolean;
 
@@ -42,7 +43,7 @@ export default class PathMap {
             current = next;
 
             ++numIterations;
-            if (Debug && numIterations % 100 === 0) {
+            if (Debug && DebugIterations && numIterations % 100 === 0) {
                 console.error(`Pathfinding ${numIterations}...`);
             }
         }
@@ -91,12 +92,19 @@ export default class PathMap {
     }
 
     public static generate(from: Vec, bounds: traverse.Dimensions, passable: PassableCallback, limits: PathLimits = {}): PathMap {
+        const start = Date.now();
+
         const passableMap = collections.init2D(bounds.width, bounds.height, (x, y) => passable(x, y));
         const pathMap = new PathMap(from, bounds, passableMap, limits);
         
         if (traverse.withinBounds(from, bounds)) {
             const initial = new Cell(from, null, 0);
-            pathMap.expandAll([initial]);
+            const numIterations = pathMap.expandAll([initial]);
+
+            if (Debug) {
+                const elapsed = Date.now() - start;
+                console.error(`Evaluated pathmap in ${elapsed} ms: numIterations=${numIterations}`);
+            }
         }
 
         return pathMap;
@@ -115,6 +123,8 @@ export default class PathMap {
     }
 
     public reevaluate(passable: PassableCallback): PathMap {
+        const start = Date.now();
+
         const bounds = this.bounds;
         const passableMap = collections.init2D(bounds.width, bounds.height, (x, y) => passable(x, y));
         const clone = new PathMap(this.from, bounds, passableMap, this.limits);
@@ -160,7 +170,12 @@ export default class PathMap {
                 initial.push(cell);
             }
         }
-        clone.expandAll(initial);
+        const numIterations = clone.expandAll(initial);
+
+        if (Debug) {
+            const elapsed = Date.now() - start;
+            console.error(`Revaluated pathmap in ${elapsed} ms: numIterations=${numIterations} cellsMadePassable=${cellsMadePassable.length} cellsMadeNotPassable=${cellsMadeNotPassable.length}`);
+        }
 
         return clone;
     }
@@ -190,10 +205,12 @@ export default class PathMap {
             this.expand(neighbour, queue);
 
             ++numIterations;
-            if (Debug && numIterations % 100 === 0) {
+            if (Debug && DebugIterations && numIterations % 100 === 0) {
                 console.error(`Pathmapping ${numIterations}, neighbours=${queue.length}...`);
             }
         }
+
+        return numIterations;
     }
 
     private assign(neighbour: Cell) {
