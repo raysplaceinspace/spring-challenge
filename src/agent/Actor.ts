@@ -282,47 +282,12 @@ export class Actor {
 
     private generateValueMap(): number[][] {
         const beliefs = this.beliefs;
-        const valueProbabilities = this.generateValueProbabilities();
-        const valueMap = collections.init2D(beliefs.width, beliefs.height, (x, y) => beliefs.cells[y][x].value * valueProbabilities[y][x]);
+        const valueMap = collections.init2D(
+            beliefs.width,
+            beliefs.height,
+            (x, y) => beliefs.cells[y][x].expectedValue());
         return valueMap;
     }
-
-    private generateValueProbabilities(): number[][] {
-        const result = collections.create2D(this.beliefs.width, this.beliefs.height, 1);
-
-        for (const enemy of this.beliefs.pacs.values()) {
-            if (!(enemy.alive && enemy.team === w.Teams.Enemy)) {
-                continue;
-            }
-
-            const seenAge = this.beliefs.tick - enemy.seenTick;
-            const pathMap = PathMap.generate(enemy.pos, this.beliefs, p => !this.beliefs.cells[p.y][p.x].wall);
-            const isochrones = pathMap.isochrones(seenAge);
-
-            let maxNumCells = 1;
-            for (let range = 0; range < isochrones.length; ++range) {
-                const isochrone = isochrones[range];
-                if (!isochrone) { continue; }
-
-                const numCells = isochrone.length;
-                if (numCells > maxNumCells) {
-                    maxNumCells = numCells;
-                }
-
-                const visitProbability = 1.0 / maxNumCells;
-                const arrivalTick = enemy.seenTick + range;
-                for (const pos of isochrone) {
-                    const seenTick = this.beliefs.cells[pos.y][pos.x].seenTick;
-                    if (seenTick < arrivalTick) { // If we have seen the cell after the enemy could have arrived, then we already know the truth
-                        result[pos.y][pos.x] *= 1 - visitProbability; // Reduce value by the probability the enemy has not touched this square
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
-
 
     private pacsToControl(beliefs: b.Beliefs, actions: Map<string, w.Action>): Iterable<b.Pac> {
         return collections.filter(beliefs.pacs.values(), p => p.team === w.Teams.Self && p.alive && !actions.has(p.key))

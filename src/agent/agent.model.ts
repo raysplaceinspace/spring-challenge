@@ -12,7 +12,7 @@ export interface AgentParams {
 
 export function defaultParams(): AgentParams {
     return {
-        DiscountRate: 1.07,
+        DiscountRate: 1.2,
         NearbyEnemiesTicks: 10,
         MoveTimeoutMilliseconds: 40,
         Penalty: 1000,

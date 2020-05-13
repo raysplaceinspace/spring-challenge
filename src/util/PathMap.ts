@@ -42,6 +42,17 @@ export default class PathMap {
         return path;
     }
 
+    public isochrone(targetCost: number): Vec[] {
+        const isochrone = new Array<Vec>();
+        for (const pos of traverse.all(this.bounds)) {
+            const cost = this.pathMap[pos.y][pos.x];
+            if (cost == targetCost) {
+                isochrone.push(pos);
+            }
+        }
+        return isochrone;
+    }
+
     public isochrones(maxCost: number): Vec[][] {
         const result = new Array<Vec[]>();
 

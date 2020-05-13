@@ -8,8 +8,13 @@ export class Cell {
     public value = 0;
     public seenTick = 0;
     public wall = false;
+    public stillAvailableProbability = 1; // Probability the value is still available and has not yet been taken by an enemy
 
     constructor(public pos: Vec) {
+    }
+
+    expectedValue() {
+        return this.value * this.stillAvailableProbability;
     }
 
     static initializeCells(view: w.View): Cell[][] {
@@ -39,8 +44,6 @@ export class Cell {
                 }
             }
         }
-
-        // Update what we cannot see
         for (const pellet of view.pellets) {
             cells[pellet.pos.y][pellet.pos.x].seen(view.tick, pellet.value);
         }
@@ -49,6 +52,7 @@ export class Cell {
     private seen(tick: number, pellet: number) {
         this.value = pellet;
         this.seenTick = tick;
+        this.stillAvailableProbability = 1;
     }
 }
 
