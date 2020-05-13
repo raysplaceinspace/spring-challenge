@@ -12,7 +12,6 @@ export interface PathLimits {
 
 export default class PathMap {
     public assignments = 0;
-    public expansions = new Set<number>();
 
     private constructor(public from: Vec, public bounds: traverse.Dimensions, private pathMap: number[][]) {
     }
@@ -139,13 +138,11 @@ export default class PathMap {
 
     private expand(from: Neighbour, passable: PassableCallback, neighbours: Neighbour[]) {
         const pos = from.pos;
-        const cost = from.cost;
+        const cost = this.pathMap[pos.y][pos.x];
 
-        if (this.expansions.has(pos.hash())) {
-            // Already expanded
+        if (cost < from.cost) {
+            // This neighbour has been superceded now
             return;
-        } else {
-            this.expansions.add(pos.hash());
         }
 
         for (const n of traverse.neighbours(pos, this.bounds)) {
