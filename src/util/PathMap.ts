@@ -11,11 +11,16 @@ export interface PathLimits {
     maxCost?: number;
 }
 
+export interface PathMapDelta {
+    nowPassable: Vec[];
+    nowNotPassable: Vec[];
+}
+
 export default class PathMap {
     public assignments = 0;
     private pathMap: Cell[][];
 
-    private constructor(public from: Vec, public bounds: traverse.Dimensions, private passable: boolean[][], private limits: PathLimits) {
+    private constructor(public from: Vec, public bounds: traverse.Dimensions, private passable: PassableCallback, private limits: PathLimits) {
         this.pathMap = collections.create2D<Cell>(bounds.width, bounds.height, null);
     }
 
@@ -94,8 +99,7 @@ export default class PathMap {
     public static generate(from: Vec, bounds: traverse.Dimensions, passable: PassableCallback, limits: PathLimits = {}): PathMap {
         const start = Date.now();
 
-        const passableMap = collections.init2D(bounds.width, bounds.height, (x, y) => passable(x, y));
-        const pathMap = new PathMap(from, bounds, passableMap, limits);
+        const pathMap = new PathMap(from, bounds, passable, limits);
         
         if (traverse.withinBounds(from, bounds)) {
             const initial = new Cell(from, null, 0);
@@ -122,30 +126,14 @@ export default class PathMap {
         return forwardMap;
     }
 
-    public reevaluate(passable: PassableCallback): PathMap {
+    public reevaluate(passable: PassableCallback, delta: PathMapDelta): PathMap {
         const start = Date.now();
 
         const bounds = this.bounds;
-        const passableMap = collections.init2D(bounds.width, bounds.height, (x, y) => passable(x, y));
-        const clone = new PathMap(this.from, bounds, passableMap, this.limits);
+        const clone = new PathMap(this.from, bounds, passable, this.limits);
 
-        const cellsMadePassable = new Array<Vec>();
-        const cellsMadeNotPassable = new Array<Vec>();
-        for (const n of traverse.all(bounds)) {
-            const oldPassable = this.passable[n.y][n.x];
-            const newPassable = this.passable[n.y][n.x];
-            if (newPassable === oldPassable) {
-                continue;
-            }
-
-            if (oldPassable && !newPassable) {
-                cellsMadeNotPassable.push(n);
-            }
-
-            if (!oldPassable && newPassable) {
-                cellsMadePassable.push(n);
-            }
-        }
+        const cellsMadePassable = delta.nowPassable;
+        const cellsMadeNotPassable = delta.nowNotPassable;
 
         // If a cell has been made passable, need to recompute everything beyond that range
         const maxCost = Math.max(1, collections.min(cellsMadePassable.map(n => this.cost(n))) ?? Infinity);
@@ -243,7 +231,7 @@ export default class PathMap {
         }
 
         for (const n of traverse.neighbours(pos, this.bounds)) {
-            if (!this.passable[n.y][n.x]) {
+            if (!this.passable(n.x, n.y)) {
                 continue;
             }
 

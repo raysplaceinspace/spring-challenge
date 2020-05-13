@@ -13,8 +13,13 @@ interface Occupant {
     dominateWith?: string;
 }
 
+interface PathMapCacheItem {
+    pathMap: PathMap;
+    nowNotPassable: Vec[];
+}
+
 export class OccupantMap {
-    private pathMapCache = new Map<b.Pac, PathMap>();
+    private pathMapCache = new Map<b.Pac, PathMapCacheItem>();
 
     private constructor(private beliefs: b.Beliefs, private occupants: Occupant[][]) {
     }
@@ -87,20 +92,34 @@ export class OccupantMap {
 
     pathfind(pac: b.Pac) {
         const passable: PassableCallback = (x, y) => this.passable(x, y, pac);
-        const initial = this.pathMapCache.get(pac);
+        const cacheItem = this.pathMapCache.get(pac);
 
         let pathMap: PathMap;
-        if (initial) {
-            pathMap = initial.reevaluate(passable);
+        if (cacheItem) {
+            if (cacheItem.nowNotPassable.length === 0) {
+                pathMap = cacheItem.pathMap;
+            } else {
+                pathMap = cacheItem.pathMap.reevaluate(passable, {
+                    nowPassable: [],
+                    nowNotPassable: cacheItem.nowNotPassable,
+                });
+            }
         } else {
             pathMap = PathMap.generate(pac.pos, this.beliefs, passable);
         }
-        this.pathMapCache.set(pac, pathMap);
+        this.pathMapCache.set(pac, {
+            pathMap,
+            nowNotPassable: [],
+        });
         return pathMap;
     }
 
     block(pos: Vec, pac: b.Pac) {
         this.occupants[pos.y][pos.x] = OccupantMap.pacOccupant(pac, this.beliefs);
+
+        for (const cacheItem of this.pathMapCache.values()) {
+            cacheItem.nowNotPassable.push(pos.clone());
+        }
     }
 
     private passable(x: number, y: number, pac: b.Pac): boolean {
