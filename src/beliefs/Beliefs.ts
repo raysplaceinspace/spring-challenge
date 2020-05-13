@@ -35,6 +35,7 @@ export class Beliefs {
     }
 
     private updateStillAvailableProbabilities() {
+        let numUpdates = 0;
         for (const enemy of this.pacs.values()) {
             if (!(enemy.alive && enemy.team === w.Teams.Enemy)) {
                 continue;
@@ -65,10 +66,17 @@ export class Beliefs {
                     const seenTick = this.cells[pos.y][pos.x].seenTick;
                     if (seenTick < arrivalTick) { // If we have seen the cell after the enemy could have arrived, then we already know the truth
                         const stillAvailableProbability = 1 - visitProbability;
-                        this.cells[pos.y][pos.x].stillAvailableProbability = Math.min(this.cells[pos.y][pos.x].stillAvailableProbability, stillAvailableProbability);
+                        if (stillAvailableProbability < this.cells[pos.y][pos.x].stillAvailableProbability) {
+                            this.cells[pos.y][pos.x].stillAvailableProbability = stillAvailableProbability;
+                            ++numUpdates;
+                        }
                     }
                 }
             }
+        }
+
+        if (numUpdates > 0) {
+            console.error(`Updated stillAvailableProbability for ${numUpdates} cells`);
         }
     }
 }

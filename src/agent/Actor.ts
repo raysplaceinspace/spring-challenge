@@ -120,9 +120,9 @@ export class Actor {
                     beliefs,
                     (pos) => this.passable(occupants, pos, pac));
                 const payoffMap = this.generatePayoffMap(pac, valueMap, pathMap);
-                const closest = collections.maxBy(this.generateCandidates(pac, payoffMap), candidate => candidate.payoff);
-                if (closest) {
-                    const path = pathMap.pathTo(closest.target);
+                const best = collections.maxBy(this.generateCandidates(pac, payoffMap), candidate => candidate.payoff);
+                if (best) {
+                    const path = pathMap.pathTo(best.target);
 
                     // Choose target - multiple steps in a straight line
                     let target = path[0];
@@ -150,7 +150,7 @@ export class Actor {
                     // Add move
                     const action: w.MoveAction = { pac: pac.id, type: "move", target };
                     moves.push(action);
-                    totalPayoff += closest.payoff;
+                    totalPayoff += best.payoff;
                 }
             }
 
