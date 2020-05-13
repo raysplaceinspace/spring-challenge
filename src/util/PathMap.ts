@@ -2,7 +2,7 @@ import * as collections from './collections';
 import * as traverse from './traverse';
 import Vec from './vector';
 
-const Debug = false;
+const Debug = true;
 const DebugIterations = false;
 
 export type PassableCallback = (x: number, y: number) => boolean;
@@ -157,20 +157,25 @@ export default class PathMap {
         }
 
         // If a cell has been made impassable, clear everything that went through that cell
-        const forwardMap = clone.forward();
-        for (const cell of cellsMadeNotPassable) {
-            clone.clearBeyond(cell, forwardMap);
-        }
-
-        // Recalculate
-        const initial = new Array<Cell>();
-        for (const n of traverse.all(bounds)) {
-            const cell = clone.pathMap[n.y][n.x];
-            if (cell) {
-                initial.push(cell);
+        if (cellsMadeNotPassable.length > 0) {
+            const forwardMap = clone.forward();
+            for (const cell of cellsMadeNotPassable) {
+                clone.clearBeyond(cell, forwardMap);
             }
         }
-        const numIterations = clone.expandAll(initial);
+
+        // Recalculate, if something has changed
+        let numIterations = 0;
+        if (cellsMadePassable.length > 0 || cellsMadeNotPassable.length > 0) {
+            const initial = new Array<Cell>();
+            for (const n of traverse.all(bounds)) {
+                const cell = clone.pathMap[n.y][n.x];
+                if (cell) {
+                    initial.push(cell);
+                }
+            }
+            numIterations = clone.expandAll(initial);
+        }
 
         if (Debug) {
             const elapsed = Date.now() - start;
