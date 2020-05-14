@@ -59,6 +59,10 @@ export class Beliefs {
     private updateProbabilityFrom(pos: Vec, forwardMap: Array<Vec>[][], reachProbability: number, reachTick: number): number {
         let numUpdates = 0;
 
+        if (reachTick > this.tick) {
+            return numUpdates; // Can only reach this cell in the future
+        }
+
         const cell = this.cells[pos.y][pos.x];
         const seenTick = cell.seenTick;
         if (seenTick < reachTick) { // If we have seen the cell after the enemy could have arrived, then we already know the truth
