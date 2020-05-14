@@ -12,12 +12,14 @@ const Debug = false;
 
 export interface PathCandidate {
     path: Vec[];
+    targets: Vec[];
+    length: number;
     payoff: number;
-    numImprovements: number;
 }
 
 interface TargetCandidate {
     target: Vec;
+    length: number;
     payoff: number;
 }
 
@@ -32,6 +34,15 @@ export class PayoffMap {
         const payoffMap = new PayoffMap(beliefs, valueMap, pathMap, params);
         payoffMap.propogateFrom(pac.pos);
         return payoffMap;
+    }
+
+    public static initCandidate(): PathCandidate {
+        return {
+            path: [],
+            targets: [],
+            length: 0,
+            payoff: 0,
+        };
     }
 
     private propogateFrom(from: Vec) {
@@ -75,10 +86,12 @@ export class PayoffMap {
         if (best) {
             const selfPath = this.pathMap.pathTo(best.target);
             const path = [...selfPath, ...previous.path];
+            const targets = [best.target, ...previous.targets];
             return {
                 path,
+                targets,
+                length: best.length,
                 payoff: best.payoff,
-                numImprovements: previous.numImprovements + 1,
             };
         } else {
             return null;
@@ -91,13 +104,17 @@ export class PayoffMap {
             if (selfPayoff <= 0) { continue; }
 
             const selfLength = this.pathMap.cost(target);
-            const previousPayoff = AgentHelper.discount(previous.payoff, selfLength * 2, this.params); // Going down this path then returning will delay going to the previous best candidate
+            const selfLoopLength = selfLength * 2;
+            const previousPayoff = AgentHelper.discount(previous.payoff, selfLoopLength, this.params); // Going down this path then returning will delay going to the previous best candidate
             const payoff = selfPayoff + previousPayoff;
 
             if (payoff <= previous.payoff) { continue; } // This is worse than just doing the previous
 
+            const length = selfLoopLength + previous.length;
+
             yield {
                 target,
+                length,
                 payoff,
             };
         }

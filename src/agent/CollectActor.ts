@@ -64,8 +64,7 @@ export class CollectActor {
                 const move = this.moveAction(pac, choice);
                 actions.set(b.Pac.key(w.Teams.Self, move.pac), move);
 
-                const final = choice.path[choice.path.length - 1];
-                console.error(`${pac.key}>${choice.payoff.toFixed(1)} (${final.string()})${repeat('+', choice.numImprovements - 1)}`);
+                console.error(`${pac.key}> [${choice.payoff.toFixed(1)}/${choice.length}] ` + choice.targets.map(v => `(${v.string()})`).join(' > '));
             }
         }
     }
@@ -87,14 +86,12 @@ export class CollectActor {
         const valueMap = this.initialValueMap.clone();
 
         const paths = new Map<b.Pac, PathCandidate>();
-        let totalPayoff = 0;
 
-        let numImprovements = 0;
         for (const pac of pacsToControl) { // Try a random order of pacs each time
             const pathMap = occupants.pathfind(pac);
 
             // Keep adding to the path until we cannot anymore
-            let current: PathCandidate = { path: [], payoff: 0, numImprovements: 0 };
+            let current: PathCandidate = PayoffMap.initCandidate();
             let next: PathCandidate;
             while (next = this.improvePath(pac, valueMap, pathMap, current)) {
                 current = next;
@@ -105,27 +102,20 @@ export class CollectActor {
             if (current.path.length > 0) {
                 occupants.block(current.path[0], pac); // Stop other pacs from using the first step so we don't end up blocking each other
                 paths.set(pac, current);
-                numImprovements += current.numImprovements;
             }
         }
 
-        return { paths, payoff: totalPayoff };
+        return { paths, payoff: collections.sum(paths.values(), p => p.payoff) };
     }
 
     private moveAction(pac: b.Pac, current: PathCandidate): w.MoveAction {
         const target = this.findTarget(pac, current.path);
         const final = current.path[current.path.length - 1];
-
-        let tag = `(${final.string()})`;
-        for (let i = 1; i < current.numImprovements; ++i) {
-            tag += '+';
-        }
-
         return {
             pac: pac.id,
             type: "move",
             target,
-            tag,
+            tag: `(${final.string()})${repeat('+', current.targets.length - 1)}`,
         };
     }
 
