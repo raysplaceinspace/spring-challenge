@@ -5,6 +5,7 @@ export interface AgentParams {
     NearbyEnemiesTicks: number;
     MoveTimeoutMilliseconds: number;
     ImprovementRange: number;
+    SafeTicks: number;
     SearchRange: number;
     IgnoreRange: number;
 }
@@ -15,6 +16,7 @@ export function defaultParams(): AgentParams {
         NearbyEnemiesTicks: 11,
         MoveTimeoutMilliseconds: 40,
         ImprovementRange: 5,
+        SafeTicks: 0,
         SearchRange: 100,
         IgnoreRange: 5,
     };

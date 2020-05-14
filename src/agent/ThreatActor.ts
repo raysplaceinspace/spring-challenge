@@ -39,7 +39,7 @@ export class ThreatActor {
             console.error(`${pac.key}: ${threats.length} threats, closest=${closest ? closest.arrivalTicks : 'null'}`);
         }
 
-        if (closest && closest.arrivalTicks <= 0) {
+        if (closest && closest.arrivalTicks <= this.params.SafeTicks) {
             // Be prepared to fight the enemy that could arrive
             const dominantForm = AgentHelper.dominate(closest.enemy.form);
             if (dominantForm !== pac.form) {
