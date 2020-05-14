@@ -120,7 +120,8 @@ export class CollectActor {
     }
 
     private improvePath(pac: b.Pac, valueMap: ValueMap, pathMap: PathMap, previous: PathCandidate) {
-        const payoffMap = PayoffMap.generate(pac, this.beliefs, valueMap, pathMap, this.params);
+        let limit = previous.length > 0 ? this.params.ImprovementRange : this.params.SearchRange;
+        const payoffMap = PayoffMap.generate(pac, this.beliefs, valueMap, pathMap, this.params, limit);
         const best = payoffMap.chooseBestOrNull(previous);
         return best;
     }

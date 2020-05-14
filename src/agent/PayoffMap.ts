@@ -25,14 +25,15 @@ interface TargetCandidate {
 
 export class PayoffMap {
     private payoffs: number[][];
+    private cells = new Array<Vec>();
 
     private constructor(private beliefs: b.Beliefs, private valueMap: ValueMap, private pathMap: PathMap, private params: a.AgentParams) {
         this.payoffs = collections.create2D(beliefs.width, beliefs.height, 0);
     }
 
-    public static generate(pac: b.Pac, beliefs: b.Beliefs, valueMap: ValueMap, pathMap: PathMap, params: a.AgentParams): PayoffMap {
+    public static generate(pac: b.Pac, beliefs: b.Beliefs, valueMap: ValueMap, pathMap: PathMap, params: a.AgentParams, maxRange: number): PayoffMap {
         const payoffMap = new PayoffMap(beliefs, valueMap, pathMap, params);
-        payoffMap.propogateFrom(pac.pos);
+        payoffMap.propogateFrom(pac.pos, maxRange);
         return payoffMap;
     }
 
@@ -45,11 +46,11 @@ export class PayoffMap {
         };
     }
 
-    private propogateFrom(from: Vec) {
+    private propogateFrom(from: Vec, maxRange: number) {
         const start = Date.now();
 
         const forwardMap = this.pathMap.forward();
-        const numUpdates = this.propogate(from, forwardMap, 0, 0);
+        const numUpdates = this.propogate(from, forwardMap, 0, 0, maxRange);
 
         if (Debug) {
             const elapsed = Date.now() - start;
@@ -57,16 +58,21 @@ export class PayoffMap {
         }
     }
 
-    private propogate(current: Vec, forwardMap: Array<Vec>[][], distance: number, accumulatedPayoff: number) {
-        let numUpdates = 1; // 1 because we're updating this cell
+    private propogate(current: Vec, forwardMap: Array<Vec>[][], distance: number, accumulatedPayoff: number, maxRange: number) {
+        let numUpdates = 0;
+        if (distance > maxRange) {
+            return numUpdates;
+        }
 
         const currentPayoff = AgentHelper.discount(this.valueMap.value(current), distance, this.params);
         accumulatedPayoff += currentPayoff;
 
         this.payoffs[current.y][current.x] = accumulatedPayoff;
+        this.cells.push(current.clone());
+        ++numUpdates;
 
         for (const next of forwardMap[current.y][current.x]) {
-            numUpdates += this.propogate(next, forwardMap, distance + 1, accumulatedPayoff);
+            numUpdates += this.propogate(next, forwardMap, distance + 1, accumulatedPayoff, maxRange);
         }
         return numUpdates;
     }
@@ -99,7 +105,7 @@ export class PayoffMap {
     }
 
     private* candidates(previous: PathCandidate): Iterable<TargetCandidate> {
-        for (const target of traverse.all(this.beliefs)) {
+        for (const target of this.cells) {
             const selfPayoff = this.payoffs[target.y][target.x];
             if (selfPayoff <= 0) { continue; }
 

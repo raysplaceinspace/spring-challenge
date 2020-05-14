@@ -4,6 +4,7 @@ export interface AgentParams {
     DiscountRate: number;
     NearbyEnemiesTicks: number;
     MoveTimeoutMilliseconds: number;
+    ImprovementRange: number;
     SearchRange: number;
 }
 
@@ -12,6 +13,7 @@ export function defaultParams(): AgentParams {
         DiscountRate: 1.2,
         NearbyEnemiesTicks: 10,
         MoveTimeoutMilliseconds: 40,
-        SearchRange: 46,
+        ImprovementRange: 5,
+        SearchRange: 100,
     };
 }
