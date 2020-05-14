@@ -31,10 +31,10 @@ export class Beliefs {
         Team.update(view, this.teams);
         Pac.update(view, this.pacs);
         Cell.update(view, this.cells);
-        this.updateStillAvailableProbabilities(start);
+        this.updateProbabilities(start);
     }
 
-    private updateStillAvailableProbabilities(start = Date.now()) {
+    private updateProbabilities(start = Date.now()) {
         let numEnemies = 0;
         let numUpdates = 0;
         for (const enemy of this.pacs.values()) {
@@ -47,40 +47,35 @@ export class Beliefs {
             const pathMap = PathMap.generate(enemy.pos, this, (x, y) => !this.cells[y][x].wall, {
                 maxCost: seenAge,
             });
-            const isochrones = pathMap.isochrones(seenAge);
 
-            let maxNumCells = 1;
-            for (let range = 0; range < isochrones.length; ++range) {
-                const isochrone = isochrones[range];
-                if (!isochrone) { continue; }
-
-                const numCells = isochrone.length;
-                if (numCells > maxNumCells) {
-                    maxNumCells = numCells;
-                }
-            }
-
-            // Decrease the probability that there is still a pellet at every cell that the enemy could have reached this turn
-            const isochrone = isochrones[seenAge];
-            if (isochrone) {
-                const range = seenAge;
-                const visitProbability = 1.0 / maxNumCells;
-                const arrivalTick = enemy.seenTick + range;
-                for (const pos of isochrone) {
-                    const seenTick = this.cells[pos.y][pos.x].seenTick;
-                    if (seenTick < arrivalTick) { // If we have seen the cell after the enemy could have arrived, then we already know the truth
-                        const stillAvailableProbability = 1 - visitProbability;
-                        if (stillAvailableProbability < this.cells[pos.y][pos.x].stillAvailableProbability) {
-                            this.cells[pos.y][pos.x].stillAvailableProbability = stillAvailableProbability;
-                            ++numUpdates;
-                        }
-                    }
-                }
-            }
+            const forwardMap = pathMap.forward();
+            numUpdates += this.updateProbabilityFrom(enemy.pos, forwardMap, 1.0, enemy.seenTick);
         }
 
         const elapsed = Date.now() - start;
         console.error(`Updated pellet beliefs for ${numUpdates} cells from ${numEnemies} enemies in ${elapsed} ms`);
+    }
+
+    private updateProbabilityFrom(pos: Vec, forwardMap: Array<Vec>[][], reachProbability: number, reachTick: number): number {
+        let numUpdates = 0;
+
+        const cell = this.cells[pos.y][pos.x];
+        const seenTick = cell.seenTick;
+        if (seenTick < reachTick) { // If we have seen the cell after the enemy could have arrived, then we already know the truth
+            const takenProbability = 1 - reachProbability;
+            if (takenProbability < cell.probability) {
+                this.cells[pos.y][pos.x].probability = takenProbability;
+                ++numUpdates;
+            }
+        }
+
+        const allNext = forwardMap[pos.y][pos.x];
+        const nextProbability = reachProbability / allNext.length;
+        for (const next of allNext) {
+            numUpdates += this.updateProbabilityFrom(next, forwardMap, nextProbability, reachTick + 1);
+        }
+
+        return numUpdates;
     }
 }
 
