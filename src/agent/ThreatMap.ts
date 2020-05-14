@@ -41,11 +41,26 @@ export class ThreatMap {
             const maxRange = (1 + this.beliefs.tick - enemy.seenTick) * AgentHelper.maxMovementSpeed(enemy, this.beliefs);
 
             // How long it will take for the enemy to reach us
-            const arrivalTicks = Math.max(0, pathMap.cost(enemy.pos) - maxRange); 
+            const arrivalTicks = Math.max(0, this.costToEnemy(enemy, pathMap) - maxRange);
             threats.push({ enemy, arrivalTicks });
         }
 
         return threats;
+    }
+
+    private costToEnemy(enemy: b.Pac, pathMap: PathMap) {
+        // Enemies are impassable normally, so cannot path to them, but can path to their neighbours
+        const target = enemy.pos;
+        let cost = pathMap.cost(target);
+        if (cost === Infinity) {
+            for (const n of traverse.neighbours(target, this.beliefs)) {
+                let subcost = pathMap.cost(n);
+                if (subcost < Infinity) {
+                    cost = Math.min(cost, subcost + 1);
+                }
+            }
+        }
+        return cost;
     }
 }
 

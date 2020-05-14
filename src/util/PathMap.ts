@@ -25,7 +25,7 @@ export default class PathMap {
         this.pathMap = collections.create2D<Cell>(bounds.width, bounds.height, null);
     }
 
-    public cost(target: Vec) {
+    public cost(target: Vec, impassable = false) {
         return this.pathMap[target.y][target.x]?.cost ?? Infinity;
     }
 
