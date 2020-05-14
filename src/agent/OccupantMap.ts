@@ -28,7 +28,7 @@ export class OccupantMap {
         const occupants: Occupant[][] = collections.init2D(
             beliefs.width,
             beliefs.height,
-            (x, y) => beliefs.cells[y][x].wall ? { wall: true } : null);
+            (x, y) => beliefs.cells[y][x].wall ? OccupantMap.wallOccupant() : null);
 
         // Occupying pacs
         for (const pac of beliefs.pacs.values()) {
@@ -62,6 +62,10 @@ export class OccupantMap {
         }
 
         return new OccupantMap(beliefs, occupants);
+    }
+
+    private static wallOccupant(): Occupant {
+        return { wall: true };
     }
 
     private static pacOccupant(pac: b.Pac, beliefs: b.Beliefs): Occupant {
