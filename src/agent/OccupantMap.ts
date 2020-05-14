@@ -11,6 +11,7 @@ interface Occupant {
     wall?: boolean;
     pac?: string;
     dominateWith?: string;
+    drawWith?: string;
 }
 
 interface PathMapCacheItem { // Treat as immutable
@@ -73,9 +74,11 @@ export class OccupantMap {
             return { pac: pac.key };
         } else {
             let dominateWith: string = null;
+            let drawWith: string = null;
             if (beliefs.tick < pac.abilityCooldownUntilTick) {
                 // Enemy is unable to change at the last second
                 dominateWith = AgentHelper.dominate(pac.form);
+                drawWith = pac.form;
             }
             return { pac: pac.key, dominateWith };
         }
@@ -136,7 +139,7 @@ export class OccupantMap {
             return true;
         } else if (occupant.pac === pac.key) {
             return true;
-        } else if (occupant.dominateWith === pac.form) {
+        } else if (occupant.dominateWith === pac.form || occupant.drawWith === pac.form) {
             return true;
         } else {
             return false;
