@@ -52,7 +52,8 @@ export class OccupantMap {
         }
         for (const enemy of beliefs.pacs.values()) {
             if (enemy.team === w.Teams.Enemy && enemy.alive && enemy.seenTick === beliefs.tick) {
-                for (const n of traverse.neighbours(enemy.pos, beliefs)) {
+                const maxMovementSpeed = AgentHelper.maxMovementSpeed(enemy, beliefs);
+                for (const n of traverse.untilRange(enemy.pos, maxMovementSpeed, beliefs)) {
                     if (selfLocations.has(n.hash()) && !occupants[n.y][n.x]) {
                         // Detected the enemy could move to the same square as us
                         occupants[n.y][n.x] = this.pacOccupant(enemy, beliefs);
