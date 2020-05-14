@@ -16,6 +16,6 @@ export function defaultParams(): AgentParams {
         MoveTimeoutMilliseconds: 40,
         ImprovementRange: 5,
         SearchRange: 100,
-        IgnoreRange: 2,
+        IgnoreRange: 5,
     };
 }
