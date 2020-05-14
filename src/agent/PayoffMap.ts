@@ -104,6 +104,8 @@ export class PayoffMap {
             if (selfPayoff <= 0) { continue; }
 
             const selfLength = this.pathMap.cost(target);
+            if (selfLength === Infinity) { continue; }
+
             const selfLoopLength = selfLength * 2;
             const previousPayoff = AgentHelper.discount(previous.payoff, selfLoopLength, this.params); // Going down this path then returning will delay going to the previous best candidate
             const payoff = selfPayoff + previousPayoff;
