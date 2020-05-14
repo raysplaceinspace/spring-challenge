@@ -56,7 +56,7 @@ export class ThreatActor {
         return {
             pac: pac.id,
             type: "speed",
-            tag: closest ? `${closest.enemy.key}+${closest.arrivalTicks}` : '*',
+            tag: closest ? `${closest.enemy.key}:${closest.arrivalTicks}` : '*',
         };
     }
 }

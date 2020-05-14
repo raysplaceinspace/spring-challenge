@@ -10,11 +10,11 @@ import PayoffMap, { PathCandidate } from './PayoffMap';
 import ValueMap from './ValueMap';
 import Vec from '../util/vector';
 import { factorial } from '../util/math';
+import { repeat } from '../util/string';
 
 interface CollectCandidate {
-    moves: w.MoveAction[];
+    paths: Map<b.Pac, PathCandidate>;
     payoff: number;
-    numImprovements: number;
 }
 
 export class CollectActor {
@@ -35,7 +35,6 @@ export class CollectActor {
 
         let best: CollectCandidate = null;
         let numIterations = 0;
-        let numImprovements = 0;
 
         const numCombinations = factorial(pacsToControl.length);
         const combinations = collections.shuffle(collections.toArray(collections.range(numCombinations)));
@@ -57,16 +56,18 @@ export class CollectActor {
             }
         }
 
+        const elapsed = Date.now() - this.start;
+        console.error(`Chose moves for ${pacsToControl.length} pacs after ${numIterations}/${numCombinations} iterations (${elapsed}ms).`);
+
         if (best) {
-            numImprovements = best.numImprovements;
-            for (const move of best.moves) {
+            for (const [pac, choice] of best.paths) {
+                const move = this.moveAction(pac, choice);
                 actions.set(b.Pac.key(w.Teams.Self, move.pac), move);
+
+                const final = choice.path[choice.path.length - 1];
+                console.error(`${pac.key}>${choice.payoff.toFixed(1)} (${final.string()})${repeat('+', choice.numImprovements - 1)}`);
             }
         }
-
-        const elapsed = Date.now() - this.start;
-        console.error(`Chose moves for ${pacsToControl.length} pacs after ${numIterations}/${numCombinations} iterations.`);
-        console.error(`> numImprovements=${numImprovements} elapsed=${elapsed}ms`);
     }
 
     private sequence(pacsToControl: b.Pac[], sequenceNumber: number) {
@@ -85,7 +86,7 @@ export class CollectActor {
         const occupants = this.initialOccupants.clone();
         const valueMap = this.initialValueMap.clone();
 
-        const moves = new Array<w.MoveAction>();
+        const paths = new Map<b.Pac, PathCandidate>();
         let totalPayoff = 0;
 
         let numImprovements = 0;
@@ -103,12 +104,12 @@ export class CollectActor {
             // Accept the path
             if (current.path.length > 0) {
                 occupants.block(current.path[0], pac); // Stop other pacs from using the first step so we don't end up blocking each other
-                moves.push(this.moveAction(pac, current));
+                paths.set(pac, current);
                 numImprovements += current.numImprovements;
             }
         }
 
-        return { moves, payoff: totalPayoff, numImprovements };
+        return { paths, payoff: totalPayoff };
     }
 
     private moveAction(pac: b.Pac, current: PathCandidate): w.MoveAction {
