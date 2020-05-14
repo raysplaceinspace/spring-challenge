@@ -47,6 +47,7 @@ export class ThreatActor {
                     pac: pac.id,
                     type: "switch",
                     form: dominantForm,
+                    tag: closest.enemy.key,
                 };
             }
         }
@@ -55,6 +56,7 @@ export class ThreatActor {
         return {
             pac: pac.id,
             type: "speed",
+            tag: closest ? `${closest.enemy.key}+${closest.arrivalTicks}` : '*',
         };
     }
 }

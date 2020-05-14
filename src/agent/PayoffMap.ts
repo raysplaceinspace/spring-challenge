@@ -13,6 +13,7 @@ const Debug = false;
 export interface PathCandidate {
     path: Vec[];
     payoff: number;
+    numImprovements: number;
 }
 
 interface TargetCandidate {
@@ -74,7 +75,11 @@ export class PayoffMap {
         if (best) {
             const selfPath = this.pathMap.pathTo(best.target);
             const path = [...selfPath, ...previous.path];
-            return { path, payoff: best.payoff };
+            return {
+                path,
+                payoff: best.payoff,
+                numImprovements: previous.numImprovements + 1,
+            };
         } else {
             return null;
         }

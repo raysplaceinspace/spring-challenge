@@ -37,9 +37,10 @@ export class ThreatMap {
 
         const pathMap = this.occupantMap.pathfind(pac);
         for (const enemy of this.enemies) {
-            const maxRange = (1 + this.beliefs.tick - pac.seenTick) * AgentHelper.maxMovementSpeed(enemy, this.beliefs);
+            // How far the enemy could have travelled since we last saw them
+            const maxRange = (1 + this.beliefs.tick - enemy.seenTick) * AgentHelper.maxMovementSpeed(enemy, this.beliefs);
 
-            // How far away was the enemy last time we saw them, and how far could they have travelled in the time since we last saw them
+            // How long it will take for the enemy to reach us
             const arrivalTicks = Math.max(0, pathMap.cost(enemy.pos) - maxRange); 
             threats.push({ enemy, arrivalTicks });
         }

@@ -6,7 +6,7 @@ import * as w from '../model';
 import * as AgentHelper from './AgentHelper';
 import OccupantMap from './OccupantMap';
 import PathMap from '../util/PathMap';
-import PayoffMap from './PayoffMap';
+import PayoffMap, { PathCandidate } from './PayoffMap';
 import ValueMap from './ValueMap';
 import Vec from '../util/vector';
 import { factorial } from '../util/math';
@@ -15,11 +15,6 @@ interface CollectCandidate {
     moves: w.MoveAction[];
     payoff: number;
     numImprovements: number;
-}
-
-interface PathCandidate {
-    path: Vec[];
-    payoff: number;
 }
 
 export class CollectActor {
@@ -98,27 +93,39 @@ export class CollectActor {
             const pathMap = occupants.pathfind(pac);
 
             // Keep adding to the path until we cannot anymore
-            let current: PathCandidate = { path: [], payoff: 0 };
+            let current: PathCandidate = { path: [], payoff: 0, numImprovements: 0 };
             let next: PathCandidate;
             while (next = this.improvePath(pac, valueMap, pathMap, current)) {
                 current = next;
                 valueMap.clear(current.path); // Consume these pellets so neither we or other pacs can consume them again
-                ++numImprovements;
             }
 
             // Accept the path
             if (current.path.length > 0) {
-                // Stop other pacs from using the first step so we don't end up blocking each other
-                occupants.block(current.path[0], pac);
-
-                // Add move
-                const target = this.findTarget(pac, current.path);
-                const action: w.MoveAction = { pac: pac.id, type: "move", target };
-                moves.push(action);
+                occupants.block(current.path[0], pac); // Stop other pacs from using the first step so we don't end up blocking each other
+                moves.push(this.moveAction(pac, current));
+                numImprovements += current.numImprovements;
             }
         }
 
         return { moves, payoff: totalPayoff, numImprovements };
+    }
+
+    private moveAction(pac: b.Pac, current: PathCandidate): w.MoveAction {
+        const target = this.findTarget(pac, current.path);
+        const final = current.path[current.path.length - 1];
+
+        let tag = `(${final.string()})`;
+        for (let i = 1; i < current.numImprovements; ++i) {
+            tag += '+';
+        }
+
+        return {
+            pac: pac.id,
+            type: "move",
+            target,
+            tag,
+        };
     }
 
     private improvePath(pac: b.Pac, valueMap: ValueMap, pathMap: PathMap, previous: PathCandidate) {
