@@ -15,6 +15,8 @@ import { repeat } from '../util/string';
 interface CollectCandidate {
     paths: Map<b.Pac, PathCandidate>;
     payoff: number;
+    payoffPerTick: number;
+    length: number;
 }
 
 export class CollectActor {
@@ -42,7 +44,7 @@ export class CollectActor {
         const collectStart = Date.now();
         for (const combination of combinations) {
             const candidate = this.chooseOne(this.sequence(pacsToControl, combination));
-            if (!best || candidate.payoff > best.payoff) {
+            if (!best || AgentHelper.objective(candidate) > AgentHelper.objective(best)) {
                 best = candidate;
             }
 
@@ -105,7 +107,14 @@ export class CollectActor {
             }
         }
 
-        return { paths, payoff: collections.sum(paths.values(), p => p.payoff) };
+        const payoff = collections.sum(paths.values(), p => p.payoff);
+        const length = collections.sum(paths.values(), p => p.length);;
+        return {
+            paths,
+            length,
+            payoff,
+            payoffPerTick: payoff / Math.max(1, length),
+        };
     }
 
     private moveAction(pac: b.Pac, current: PathCandidate): w.MoveAction {

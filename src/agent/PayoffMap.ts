@@ -15,12 +15,14 @@ export interface PathCandidate {
     targets: Vec[];
     length: number;
     payoff: number;
+    payoffPerTick: number;
 }
 
 interface TargetCandidate {
     target: Vec;
     length: number;
     payoff: number;
+    payoffPerTick: number;
 }
 
 export class PayoffMap {
@@ -43,6 +45,7 @@ export class PayoffMap {
             targets: [],
             length: 0,
             payoff: 0,
+            payoffPerTick: 0,
         };
     }
 
@@ -88,7 +91,7 @@ export class PayoffMap {
     }
 
     chooseBestOrNull(previous: PathCandidate): PathCandidate {
-        const best = collections.maxBy(this.candidates(previous), candidate => candidate.payoff);
+        const best = collections.maxBy(this.candidates(previous), candidate => AgentHelper.objective(candidate));
         if (best) {
             const selfPath = this.pathMap.pathTo(best.target);
             const path = [...selfPath, ...previous.path];
@@ -98,6 +101,7 @@ export class PayoffMap {
                 targets,
                 length: best.length,
                 payoff: best.payoff,
+                payoffPerTick: best.payoffPerTick,
             };
         } else {
             return null;
@@ -124,6 +128,7 @@ export class PayoffMap {
                 target,
                 length,
                 payoff,
+                payoffPerTick: payoff / Math.max(1, length),
             };
         }
     }

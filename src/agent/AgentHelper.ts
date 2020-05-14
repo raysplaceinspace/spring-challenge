@@ -5,6 +5,11 @@ import * as b from '../beliefs';
 import * as w from '../model';
 import Vec from '../util/vector';
 
+export interface Candidate {
+    payoff: number;
+    payoffPerTick: number;
+}
+
 export function discount(value: number, ticks: number, params: a.AgentParams) {
     return value / Math.pow(params.DiscountRate, ticks);
 }
@@ -29,4 +34,8 @@ export function maxMovementSpeed(pac: b.Pac, beliefs: b.Beliefs): number {
 
 export function pacsToControl(beliefs: b.Beliefs, actions: Map<string, w.Action>): Iterable<b.Pac> {
     return collections.filter(beliefs.pacs.values(), p => p.team === w.Teams.Self && p.alive && !actions.has(p.key))
+}
+
+export function objective(candidate: Candidate): number {
+    return candidate.payoff;
 }
