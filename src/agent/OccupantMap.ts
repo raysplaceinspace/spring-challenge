@@ -10,6 +10,7 @@ import Vec from '../util/vector';
 interface Occupant {
     wall?: boolean;
     pac?: string;
+    team?: number;
     dominateWith?: string;
     drawWith?: string;
 }
@@ -22,10 +23,10 @@ interface PathMapCacheItem { // Treat as immutable
 export class OccupantMap {
     private pathMapCache = new Map<b.Pac, PathMapCacheItem>();
 
-    private constructor(private beliefs: b.Beliefs, private occupants: Occupant[][]) {
+    private constructor(private beliefs: b.Beliefs, private occupants: Occupant[][], private params: a.AgentParams) {
     }
 
-    public static generate(beliefs: b.Beliefs): OccupantMap {
+    public static generate(beliefs: b.Beliefs, params: a.AgentParams): OccupantMap {
         const occupants: Occupant[][] = collections.init2D(
             beliefs.width,
             beliefs.height,
@@ -62,7 +63,7 @@ export class OccupantMap {
             }
         }
 
-        return new OccupantMap(beliefs, occupants);
+        return new OccupantMap(beliefs, occupants, params);
     }
 
     private static wallOccupant(): Occupant {
@@ -71,7 +72,7 @@ export class OccupantMap {
 
     private static pacOccupant(pac: b.Pac, beliefs: b.Beliefs): Occupant {
         if (pac.team === w.Teams.Self) {
-            return { pac: pac.key };
+            return { pac: pac.key, team: pac.team };
         } else {
             let dominateWith: string = null;
             let drawWith: string = null;
@@ -80,12 +81,12 @@ export class OccupantMap {
                 dominateWith = AgentHelper.dominate(pac.form);
                 drawWith = pac.form;
             }
-            return { pac: pac.key, dominateWith };
+            return { pac: pac.key, team: pac.team, dominateWith, drawWith };
         }
     }
 
     clone() {
-        const clone = new OccupantMap(this.beliefs, collections.clone2D(this.occupants));
+        const clone = new OccupantMap(this.beliefs, collections.clone2D(this.occupants), this.params);
         clone.pathMapCache = new Map(this.pathMapCache);
         return clone;
     }
@@ -138,6 +139,9 @@ export class OccupantMap {
         if (!occupant) {
             return true;
         } else if (occupant.pac === pac.key) {
+            return true;
+        } else if (occupant.team === w.Teams.Self && Vec.l1(pac.pos, new Vec(x, y)) >= this.params.IgnoreRange) {
+            // Ignore own pacs if they are far away enough
             return true;
         } else if (occupant.dominateWith === pac.form || occupant.drawWith === pac.form) {
             return true;

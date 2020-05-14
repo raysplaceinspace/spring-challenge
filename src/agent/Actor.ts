@@ -23,7 +23,7 @@ export class Actor {
     choose(): w.Action[] {
         const actions = new Map<string, w.Action>();
 
-        const occupantMap = OccupantMap.generate(this.beliefs);
+        const occupantMap = OccupantMap.generate(this.beliefs, this.params);
         occupantMap.precompute(collections.filter(this.beliefs.pacs.values(), p => p.team === w.Teams.Self && p.alive)); // Precompute the paths for all my pacs
 
         const threatActor = new ThreatActor(this.view, this.beliefs, occupantMap, this.params);
