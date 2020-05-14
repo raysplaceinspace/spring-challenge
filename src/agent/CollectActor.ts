@@ -14,6 +14,12 @@ import { factorial } from '../util/math';
 interface CollectCandidate {
     moves: w.MoveAction[];
     payoff: number;
+    numImprovements: number;
+}
+
+interface PathCandidate {
+    path: Vec[];
+    payoff: number;
 }
 
 export class CollectActor {
@@ -34,6 +40,7 @@ export class CollectActor {
 
         let best: CollectCandidate = null;
         let numIterations = 0;
+        let numImprovements = 0;
 
         const numCombinations = factorial(pacsToControl.length);
         const combinations = collections.shuffle(collections.toArray(collections.range(numCombinations)));
@@ -56,13 +63,15 @@ export class CollectActor {
         }
 
         if (best) {
+            numImprovements = best.numImprovements;
             for (const move of best.moves) {
                 actions.set(b.Pac.key(w.Teams.Self, move.pac), move);
             }
         }
 
         const elapsed = Date.now() - this.start;
-        console.error(`Chose moves for ${pacsToControl.length} pacs after ${numIterations}/${numCombinations} iterations (${elapsed} ms)`);
+        console.error(`Chose moves for ${pacsToControl.length} pacs after ${numIterations}/${numCombinations} iterations.`);
+        console.error(`> numImprovements=${numImprovements} elapsed=${elapsed}ms`);
     }
 
     private sequence(pacsToControl: b.Pac[], sequenceNumber: number) {
@@ -84,27 +93,38 @@ export class CollectActor {
         const moves = new Array<w.MoveAction>();
         let totalPayoff = 0;
 
+        let numImprovements = 0;
         for (const pac of pacsToControl) { // Try a random order of pacs each time
             const pathMap = occupants.pathfind(pac);
-            const payoffMap = PayoffMap.generate(pac, this.beliefs, valueMap, pathMap, this.params);
 
-            const best = collections.maxBy(payoffMap.candidates(), candidate => candidate.payoff);
-            if (best) {
-                const path = pathMap.pathTo(best.target);
+            // Keep adding to the path until we cannot anymore
+            let current: PathCandidate = { path: [], payoff: 0 };
+            let next: PathCandidate;
+            while (next = this.improvePath(pac, valueMap, pathMap, current)) {
+                current = next;
+                valueMap.clear(current.path); // Consume these pellets so neither we or other pacs can consume them again
+                ++numImprovements;
+            }
+
+            // Accept the path
+            if (current.path.length > 0) {
+                // Stop other pacs from using the first step so we don't end up blocking each other
+                occupants.block(current.path[0], pac);
 
                 // Add move
-                const target = this.findTarget(pac, path);
+                const target = this.findTarget(pac, current.path);
                 const action: w.MoveAction = { pac: pac.id, type: "move", target };
                 moves.push(action);
-                totalPayoff += best.payoff;
-
-                // Block other pacs from doing the same thing
-                valueMap.clear(path); // No other pac can go for the same pellets
-                occupants.block(path[0], pac); // Stop other pacs from using the first step so we don't end up blocking each other
             }
         }
 
-        return { moves, payoff: totalPayoff };
+        return { moves, payoff: totalPayoff, numImprovements };
+    }
+
+    private improvePath(pac: b.Pac, valueMap: ValueMap, pathMap: PathMap, previous: PathCandidate) {
+        const payoffMap = PayoffMap.generate(pac, this.beliefs, valueMap, pathMap, this.params);
+        const best = payoffMap.chooseBestOrNull(previous);
+        return best;
     }
 
     private findTarget(pac: b.Pac, path: Vec[]): Vec {

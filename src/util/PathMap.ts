@@ -19,6 +19,7 @@ export interface PathMapDelta {
 export default class PathMap {
     public assignments = 0;
     private pathMap: Cell[][];
+    private forwardMap: Array<Vec>[][];
 
     private constructor(public from: Vec, public bounds: traverse.Dimensions, private passable: PassableCallback, private limits: PathLimits) {
         this.pathMap = collections.create2D<Cell>(bounds.width, bounds.height, null);
@@ -115,6 +116,10 @@ export default class PathMap {
     }
 
     public forward(): Array<Vec>[][] {
+        if (this.forwardMap) {
+            return this.forwardMap;
+        }
+
         const bounds = this.bounds;
         const forwardMap = collections.init2D(bounds.width, bounds.height, () => new Array<Vec>());
         for (const n of traverse.all(bounds)) {
@@ -123,6 +128,8 @@ export default class PathMap {
                 forwardMap[previous.y][previous.x].push(n);
             }
         }
+
+        this.forwardMap = forwardMap;
         return forwardMap;
     }
 

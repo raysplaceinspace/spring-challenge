@@ -10,6 +10,16 @@ import Vec from '../util/vector';
 
 const Debug = false;
 
+export interface PathCandidate {
+    path: Vec[];
+    payoff: number;
+}
+
+interface TargetCandidate {
+    target: Vec;
+    payoff: number;
+}
+
 export class PayoffMap {
     private payoffs: number[][];
 
@@ -59,15 +69,32 @@ export class PayoffMap {
         return this.payoffs[pos.y][pos.x];
     }
 
-    public* candidates(): Iterable<a.TargetCandidate> {
+    chooseBestOrNull(previous: PathCandidate): PathCandidate {
+        const best = collections.maxBy(this.candidates(previous), candidate => candidate.payoff);
+        if (best) {
+            const selfPath = this.pathMap.pathTo(best.target);
+            const path = [...selfPath, ...previous.path];
+            return { path, payoff: best.payoff };
+        } else {
+            return null;
+        }
+    }
+
+    private* candidates(previous: PathCandidate): Iterable<TargetCandidate> {
         for (const target of traverse.all(this.beliefs)) {
-            const payoff = this.payoffs[target.y][target.x];
-            if (payoff > 0) {
-                yield {
-                    target,
-                    payoff,
-                };
-            }
+            const selfPayoff = this.payoffs[target.y][target.x];
+            if (selfPayoff <= 0) { continue; }
+
+            const selfLength = this.pathMap.cost(target);
+            const previousPayoff = AgentHelper.discount(previous.payoff, selfLength * 2, this.params); // Going down this path will delay going to the previous best candidate
+            const payoff = selfPayoff + previousPayoff;
+
+            if (payoff <= previous.payoff) { continue; } // This is worse than just doing the previous
+
+            yield {
+                target,
+                payoff,
+            };
         }
     }
 }

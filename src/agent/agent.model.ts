@@ -7,11 +7,6 @@ export interface AgentParams {
     SearchRange: number;
 }
 
-export interface TargetCandidate {
-    target: Vec;
-    payoff: number;
-}
-
 export function defaultParams(): AgentParams {
     return {
         DiscountRate: 1.2,
