@@ -86,7 +86,7 @@ export class PayoffMap {
             if (selfPayoff <= 0) { continue; }
 
             const selfLength = this.pathMap.cost(target);
-            const previousPayoff = AgentHelper.discount(previous.payoff, selfLength * 2, this.params); // Going down this path will delay going to the previous best candidate
+            const previousPayoff = AgentHelper.discount(previous.payoff, selfLength * 2, this.params); // Going down this path then returning will delay going to the previous best candidate
             const payoff = selfPayoff + previousPayoff;
 
             if (payoff <= previous.payoff) { continue; } // This is worse than just doing the previous
