@@ -7,6 +7,8 @@ import PathMap from '../util/PathMap';
 import Team from './Team';
 import Vec from '../util/vector';
 
+const Debug = false;
+
 export class Beliefs {
     public tick: number;
 
@@ -70,6 +72,10 @@ export class Beliefs {
             if (takenProbability < cell.probability) {
                 this.cells[pos.y][pos.x].probability = takenProbability;
                 ++numUpdates;
+
+                if (Debug) {
+                    console.error(`P(${pos.string()}): ${takenProbability.toPrecision(3)}`);
+                }
             }
         }
 
